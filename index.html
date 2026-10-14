@@ -1017,7 +1017,8 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
       const fb = real ? (cur.isMoon ? cur.parent : cur) : null, ok = !!(fb && fb.ln && fb.au);
       if (llFor && (llFor !== fb || !ok)) { llFor.ln.visible = orbitsVisible; llFor = null; LL.visible = false; }
       if (!ok) return;
-      if (llFor !== fb) { llFor = fb; fb.ln.visible = false; LL.material.color.copy(fb.ln.material.color); LL.material.opacity = fb.ln.material.opacity; LL.visible = true; }
+      if (llFor !== fb) { llFor = fb; LL.material.color.copy(fb.ln.material.color); LL.material.opacity = fb.ln.material.opacity; LL.visible = true; }
+fb.ln.visible = false;
       const e = fb.ecc || 0, a = fb.a, bb = a * Math.sqrt(1 - e * e), inc = fb.incRad || 0, si = Math.sin(inc), ci = Math.cos(inc), E0 = fb.E;
       const P = E => { const sE = Math.sin(E); return [a * (Math.cos(E) - e), bb * sE * si, -bb * sE * ci]; };
       const p0 = P(E0), dEdS = 1 / (a * Math.sqrt(1 - e * e * Math.cos(E0) * Math.cos(E0))), offs = [];
