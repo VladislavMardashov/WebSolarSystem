@@ -642,8 +642,19 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     const LPS = TH.ShaderChunk.lights_pars_begin.replace('vec3 lVector = pointLight.position - geometry.position;', 'vec3 lVector = uSunDir;');
     const sunPatch = sh => { sh.uniforms.uSunDir = SUNU.uSunDir; sh.fragmentShader = sh.fragmentShader.replace('#include <lights_pars_begin>', 'uniform vec3 uSunDir;\n' + LPS); };
 
-    function applyNormalPatches(mat) {
+    /* Композиция шейдерных патчей: не перезаписывает предыдущий onBeforeCompile, а вызывает его до нового. */
+    function chainPatch(mat, fn) {
+      const prev = mat.onBeforeCompile;
+      const hasPrev = typeof prev === 'function' && prev !== TH.Material.prototype.onBeforeCompile;
       mat.onBeforeCompile = function (sh) {
+        if (hasPrev) prev.call(this, sh);
+        fn.call(this, sh);
+      };
+      mat.needsUpdate = true;
+    }
+
+    function applyNormalPatches(mat) {
+      chainPatch(mat, function (sh) {
         sh.uniforms.uNormLitFrom = nrmU.uFrom;
         sh.uniforms.uNormLitTo   = nrmU.uTo;
         sh.uniforms.uNrmOpacity  = nrmU.uOpacity;
@@ -679,8 +690,7 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
 { float _litF = smoothstep(uNormLitFrom, uNormLitTo, dot(_nSaved, normalize(uSunDir))) * uNrmOpacity;
   normal = normalize(mix(_nSaved, normal, _litF)); }`
         );
-      };
-      mat.needsUpdate = true;
+      });
     }
 
     function patchSunLighting() {
@@ -733,10 +743,13 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
           em.emissiveMap = tx.cit;
           em.emissive.set(0xffcc88);
           em.emissiveIntensity = 0.95;
-          em.onBeforeCompile = sh => {
+          chainPatch(em, sh => {
             sh.uniforms.uSunV = earthU.uSunV;
-            sh.fragmentShader = 'uniform vec3 uSunV;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance*=1.-smoothstep(-.04,.10,dot(normalize(normal),uSunV));');
-          };
+            sh.fragmentShader = 'uniform vec3 uSunV;\n' + sh.fragmentShader.replace(
+              '#include <emissivemap_fragment>',
+              '#include <emissivemap_fragment>\ntotalEmissiveRadiance*=1.-smoothstep(-.04,.10,dot(normalize(normal),uSunV));'
+            );
+          });
         }
       }
       if (k === 'ven' && tx.ven_atm) {
