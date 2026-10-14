@@ -12,7 +12,10 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 button{flex:none;border:1px solid rgba(255,255,255,.15);background:var(--chip);color:var(--fg);padding:10px 14px;border-radius:99px;font:inherit;backdrop-filter:blur(8px);cursor:pointer}
 button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 button.mode{background:rgba(60,120,220,.35)}
-#fsBtn{width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px;flex:none}
+#fsBtn,#setBtn{width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px;flex:none}
+#setBtn svg{transition:transform .25s}
+#setBtn.open{background:var(--acc);color:#111;border-color:var(--acc)}
+#setBtn.open svg{transform:rotate(60deg)}
 #fps{
   position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:8px;z-index:6;
   font:11px ui-monospace,monospace;color:var(--fg);opacity:.55;
@@ -75,6 +78,75 @@ button.mode{background:rgba(60,120,220,.35)}
 #venAtmCtl label{opacity:.75;font-size:11px}
 #venAtmCtl input[type=range]{width:130px;accent-color:var(--acc);cursor:pointer}
 #venAtmCtl .v{font-family:ui-monospace,monospace;font-size:10.5px;color:#e9edf5;min-width:40px;text-align:right;opacity:.9}
+
+/* ============ Меню настроек ============ */
+#settingsMenu{
+  position:fixed;left:8px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:35;
+  display:flex;flex-direction:column;gap:10px;
+  background:rgba(12,16,28,.95);border:1px solid rgba(255,255,255,.18);border-radius:14px;
+  backdrop-filter:blur(14px);box-shadow:0 12px 32px rgba(0,0,0,.6);
+  padding:12px;min-width:240px;
+  opacity:0;visibility:hidden;transform:translateY(8px) scale(.98);
+  transition:opacity .18s,transform .18s,visibility 0s linear .18s;
+  pointer-events:none;
+}
+#settingsMenu.open{
+  opacity:1;visibility:visible;transform:translateY(0) scale(1);
+  transition:opacity .18s,transform .18s,visibility 0s;
+  pointer-events:auto;
+}
+#settingsMenu .section{display:flex;flex-direction:column;gap:6px}
+#settingsMenu .section-label{
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--fg);opacity:.5;padding:0 4px;
+}
+#settingsMenu .seg{
+  display:flex;gap:2px;background:rgba(255,255,255,.05);border-radius:10px;padding:3px;
+}
+#settingsMenu .seg button{
+  flex:1;border:none;background:transparent;color:var(--fg);
+  padding:7px 6px;border-radius:7px;font:inherit;font-size:12px;cursor:pointer;
+  transition:background .15s,color .15s;white-space:nowrap;
+}
+#settingsMenu .seg button:hover{background:rgba(255,255,255,.06)}
+#settingsMenu .seg button.on{background:var(--acc);color:#111}
+#settingsMenu .toggle{
+  position:relative;display:flex;background:rgba(255,255,255,.05);
+  border-radius:10px;padding:3px;cursor:pointer;user-select:none;
+}
+#settingsMenu .toggle .thumb{
+  position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:calc(100% - 6px);
+  background:linear-gradient(135deg,rgba(60,120,220,.9),rgba(90,160,255,.7));
+  border-radius:7px;
+  transition:transform .28s cubic-bezier(.4,.2,.2,1),background .28s;
+  box-shadow:0 2px 8px rgba(60,120,220,.45);
+}
+#settingsMenu .toggle.real .thumb{
+  transform:translateX(100%);
+  background:linear-gradient(135deg,var(--acc),#ffd280);
+  box-shadow:0 2px 8px rgba(255,179,71,.5);
+}
+#settingsMenu .toggle .opt{
+  flex:1;text-align:center;padding:7px 10px;font-size:12px;z-index:2;
+  position:relative;transition:color .2s;color:var(--fg);
+}
+#settingsMenu .row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:4px;font-size:12.5px;
+}
+#settingsMenu .sw{position:relative;width:36px;height:20px;flex:none;display:inline-block}
+#settingsMenu .sw input{opacity:0;width:0;height:0;position:absolute}
+#settingsMenu .sw span{
+  position:absolute;inset:0;background:rgba(255,255,255,.1);border-radius:99px;
+  cursor:pointer;transition:background .2s;
+}
+#settingsMenu .sw span::before{
+  content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;
+  background:var(--fg);border-radius:50%;transition:transform .2s,background .2s;
+}
+#settingsMenu .sw input:checked + span{background:var(--acc)}
+#settingsMenu .sw input:checked + span::before{transform:translateX(16px);background:#111}
+#settingsMenu .divider{height:1px;background:rgba(255,255,255,.08);margin:2px 0}
 
 /* Панель ошибок */
 #errPanel{
@@ -394,6 +466,21 @@ renderer.domElement.addEventListener('webglcontextrestored', () => console.warn(
 const worker = new Worker(workerUrl);
 worker.onerror = (e) => showError('[worker] ' + (e.message || e));
 
+/* Базовая яркость свечения — 300%. */
+const SUN_GLOW_BASE = 3.0;
+/* Постоянное затемнение скайбокса в реализме — 60% от базовой яркости. */
+const SKY_DIM_MUL = 0.6;
+/* Физический радиус Солнца в юнитах сцены (обновляется в apply()). */
+let sunBaseScale = 8;
+/* Скорости симуляции по индексу spI. */
+const SPEEDS = [0, 1, 16, 256];
+/* Видимость линий орбит. */
+let orbitsVisible = true;
+/* Видимость подписей спутников (при фокусе на планете). */
+let moonLabelsVisible = true;
+/* Видимость инфопанели выбранного объекта. */
+let infoPanelVisible = true;
+
 (async () => {
   const ld = $('#load'), lb = ld.querySelector('i'), lt = ld.querySelector('.tx');
   const tick = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
@@ -531,13 +618,18 @@ worker.onerror = (e) => showError('[worker] ' + (e.message || e));
       skyTexture.minFilter = TH.LinearMipmapLinearFilter; skyTexture.magFilter = TH.LinearFilter;
       skyTexture.generateMipmaps = true; skyTexture.encoding = TH.sRGBEncoding;
       skyTexture.needsUpdate = true;
-      const skyUni = { uTex: { value: skyTexture }, uBright: { value: 1.0 } };
+      const skyUni = { uTex: { value: skyTexture }, uBright: { value: 1.0 }, uLinear: { value: 0 } };
       skySphere = new TH.Mesh(new TH.SphereGeometry(3000, 96, 64),
         new TH.ShaderMaterial({
           uniforms: skyUni,
           vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-          fragmentShader: `uniform sampler2D uTex; uniform float uBright; varying vec2 vUv;
-void main(){ vec3 c = texture2D(uTex, vUv).rgb; c = pow(c, vec3(1.0 / max(uBright, 0.01))); gl_FragColor = vec4(c, 1.0); }`,
+          fragmentShader: `uniform sampler2D uTex; uniform float uBright; uniform float uLinear; varying vec2 vUv;
+void main(){
+  vec3 c = texture2D(uTex, vUv).rgb;
+  vec3 cG = pow(c, vec3(1.0 / max(uBright, 0.01)));
+  vec3 cL = c * uBright;
+  gl_FragColor = vec4(mix(cG, cL, uLinear), 1.0);
+}`,
           side: TH.BackSide, depthWrite: false, fog: false
         }));
       skySphere.renderOrder = -2; skySphere.userData.uni = skyUni; sky.add(skySphere);
@@ -551,7 +643,9 @@ void main(){ vec3 c = texture2D(uTex, vUv).rgb; c = pow(c, vec3(1.0 / max(uBrigh
     const gl3 = spr(G('rgba(255,180,80,.35)', 'rgba(255,100,20,.08)'), 1, 1);
     const gl4 = spr(G('rgba(255,160,60,.2)', 'rgba(255,80,10,.04)'), 1, 1);
     const gl5 = spr(G('rgba(255,140,40,.12)', 'rgba(255,60,5,.015)'), 1, 1);
+    const glFar = spr(G('rgba(255,200,120,.4)', 'rgba(255,120,40,.06)'), 1, 0);
     glow.renderOrder = 4; gl2.renderOrder = 3; gl3.renderOrder = 2; gl4.renderOrder = 1; gl5.renderOrder = 0; sunM.renderOrder = 5;
+    glFar.renderOrder = -1;
     const sunLight = new TH.PointLight(0xfff1de, 3, 0, 1);
     sunLight.castShadow = true;
     const SHADOW_MAP_SIZE = Q.shadowSize;
@@ -559,7 +653,7 @@ void main(){ vec3 c = texture2D(uTex, vUv).rgb; c = pow(c, vec3(1.0 / max(uBrigh
     sunLight.shadow.bias = -0.0005; sunLight.shadow.radius = 3; sunLight.shadow.normalBias = 0.015;
     console.log(`[shadow] mapSize=${SHADOW_MAP_SIZE}`);
     const ambLight = new TH.AmbientLight(0x2a3050, 0.35);
-    S.add(sunM, glow, gl2, gl3, gl4, gl5, sunLight, ambLight);
+    S.add(sunM, glow, gl2, gl3, gl4, gl5, glFar, sunLight, ambLight);
 
     const ATM = { plu: { H: .1, k: 3, b: [.45, 1.1, 3.4], m: .15, i: .5 }, ven: { H: .07, k: 3, b: [1.55, 1.25, .8], m: .8, i: 1.1 }, earth: { H: .05, k: 4, b: [.58, 1.35, 3.31], m: .12, i: 1 }, mars: { H: .04, k: 3.5, b: [1.3, .95, .7], m: .6, i: .5 }, jup: { H: .04, k: 4, b: [1.2, 1, .8], m: .5, i: .45 }, sat: { H: .04, k: 4, b: [1.3, 1.05, .75], m: .5, i: .45 }, ura: { H: .045, k: 4, b: [.9, 1.9, 2.2], m: .1, i: .8 }, nep: { H: .045, k: 4, b: [.5, 1.2, 3.2], m: .1, i: .9 } };
     const ZA = new TH.Vector3(0, 0, 1);
@@ -650,7 +744,6 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     const LPS = TH.ShaderChunk.lights_pars_begin.replace('vec3 lVector = pointLight.position - geometry.position;', 'vec3 lVector = uSunDir;');
     const sunPatch = sh => { sh.uniforms.uSunDir = SUNU.uSunDir; sh.fragmentShader = sh.fragmentShader.replace('#include <lights_pars_begin>', 'uniform vec3 uSunDir;\n' + LPS); };
 
-    /* Композиция шейдерных патчей: не перезаписывает предыдущий onBeforeCompile, а вызывает его до нового. */
     function chainPatch(mat, fn) {
       const prev = mat.onBeforeCompile;
       const hasPrev = typeof prev === 'function' && prev !== TH.Material.prototype.onBeforeCompile;
@@ -851,7 +944,8 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     const kbs = [], kqs = [], kps = [], kbMat = new TH.PointsMaterial({ color: 0x5a6578, size: 1.25, sizeAttenuation: false, transparent: true, opacity: .48 });
     KC.forEach(cc => {
       const arr = new Float32Array(cc.n * 3), g = new TH.BufferGeometry(); g.setAttribute('position', new TH.BufferAttribute(arr, 3));
-      const pt = new TH.Points(g, kbMat); pt.frustumCulled = false; pt.userData.w = .0157 / Math.pow(cc.c, 1.5); kbs.push(pt); kps.push(arr);
+      const mat = kbMat.clone();
+      const pt = new TH.Points(g, mat); pt.frustumCulled = false; pt.userData.w = .0157 / Math.pow(cc.c, 1.5); kbs.push(pt); kps.push(arr);
       kqs.push(Array.from({ length: cc.n }, () => [rnd() * 2 * PI, Math.min(50, Math.max(30, cc.c + cc.s * G3())), rnd() - .5]));
     });
     S.add(...belts, ...kbs, ...bms);
@@ -915,8 +1009,13 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     LL.geometry.setAttribute('position', new TH.BufferAttribute(LLbuf, 3)); LL.renderOrder = -1; LL.visible = false; LL.frustumCulled = false; S.add(LL);
     let llFor = null;
     function updateLocalOrbit() {
+      if (!orbitsVisible) {
+        if (llFor) { llFor.ln.visible = false; llFor = null; }
+        LL.visible = false;
+        return;
+      }
       const fb = real ? (cur.isMoon ? cur.parent : cur) : null, ok = !!(fb && fb.ln && fb.au);
-      if (llFor && (llFor !== fb || !ok)) { llFor.ln.visible = true; llFor = null; LL.visible = false; }
+      if (llFor && (llFor !== fb || !ok)) { llFor.ln.visible = orbitsVisible; llFor = null; LL.visible = false; }
       if (!ok) return;
       if (llFor !== fb) { llFor = fb; fb.ln.visible = false; LL.material.color.copy(fb.ln.material.color); LL.material.opacity = fb.ln.material.opacity; LL.visible = true; }
       const e = fb.ecc || 0, a = fb.a, bb = a * Math.sqrt(1 - e * e), inc = fb.incRad || 0, si = Math.sin(inc), ci = Math.cos(inc), E0 = fb.E;
@@ -948,6 +1047,7 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
         sunLight.castShadow = true;
         ambLight.intensity = 0.40 * SIM_LIGHT_MUL;
       }
+      sunBaseScale = sunScale;
       sunM.scale.setScalar(sunScale);
       if (real) {
         glow.scale.set(sunScale * 12, sunScale * 12, 1);
@@ -964,6 +1064,8 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
         gl5.scale.set(sunScale * 160, sunScale * 160, 1);
         glow.material.opacity = 0.9; gl2.material.opacity = 0.55; gl3.material.opacity = 0.30; gl4.material.opacity = 0.18; gl5.material.opacity = 0.10;
       }
+      glFar.scale.set(sunScale * 30, sunScale * 30, 1);
+      glFar.material.opacity = 0.4;
       for (const b of bodies) {
         if (b.isRoot || b.isSun) continue;
         b.a = real ? b.au * AU_TO_UNITS : b.baseA0;
@@ -1030,6 +1132,7 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
       const v = new TH.Vector3();
       labels.forEach(l => {
         if (!l.obj) return;
+        if (l.isMoon && !moonLabelsVisible) { l.el.classList.remove('show'); return; }
         l.obj.getWorldPosition(v); v.project(C);
         const x = (v.x * .5 + .5) * innerWidth, y = (-v.y * .5 + .5) * innerHeight;
         if (v.z > 1 || !isFinite(x) || !isFinite(y) || x < -24 || x > innerWidth + 24 || y < -12 || y > innerHeight + 12) l.el.classList.remove('show');
@@ -1039,6 +1142,7 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     let infoCollapsed = false;
     function showInfo(b) {
       const el = $('#info');
+      if (!infoPanelVisible) { el.classList.remove('show'); return; }
       if (b.isMoon) {
         el.innerHTML = `<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body"><p>Спутник планеты: ${b.parent.n}</p><div class="row"><span class="k">Радиус</span><span>${b.ud.mkm.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Расстояние до планеты</span><span>${b.ud.mdist.toLocaleString('ru')} км</span></div></div>`;
         el.classList.toggle('collapsed', infoCollapsed); el.classList.add('show');
@@ -1065,45 +1169,102 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     fpsEl.textContent = '— FPS';
     document.body.append(fpsEl);
     let _fFrames = 0, _fAccum = 0;
+
+    /* ============ Кнопка настроек (первая, левый край) ============ */
+    const setBtn = document.createElement('button');
+    setBtn.id = 'setBtn';
+    setBtn.title = 'Настройки';
+    setBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+    bar.append(setBtn);
+
+    const setMenu = document.createElement('div');
+    setMenu.id = 'settingsMenu';
+    setMenu.innerHTML =
+      '<div class="section"><div class="section-label">Скорость</div>' +
+      '<div class="seg" id="speedSeg">' +
+        '<button data-sp="0">Пауза</button>' +
+        '<button data-sp="1" class="on">x1</button>' +
+        '<button data-sp="2">x16</button>' +
+        '<button data-sp="3">x256</button>' +
+      '</div></div>' +
+      '<div class="section"><div class="section-label">Режим</div>' +
+      '<div class="toggle" id="modeToggle">' +
+        '<div class="thumb"></div>' +
+        '<div class="opt" data-mode="0">Упрощённый</div>' +
+        '<div class="opt" data-mode="1">Реализм</div>' +
+      '</div></div>' +
+      '<div class="divider"></div>' +
+      '<div class="section">' +
+        '<div class="row"><span>Линии орбит</span><label class="sw"><input type="checkbox" id="orbitsChk" checked><span></span></label></div>' +
+        '<div class="row"><span>Подписи спутников</span><label class="sw"><input type="checkbox" id="moonLabelsChk" checked><span></span></label></div>' +
+        '<div class="row"><span>Панель информации</span><label class="sw"><input type="checkbox" id="infoChk" checked><span></span></label></div>' +
+      '</div>';
+    document.body.append(setMenu);
+
+    const toggleMenu = () => {
+      setMenu.classList.toggle('open');
+      setBtn.classList.toggle('open');
+    };
+    setBtn.onclick = e => { e.stopPropagation(); toggleMenu(); };
+    document.addEventListener('click', e => {
+      if (setMenu.classList.contains('open') && !setMenu.contains(e.target) && !setBtn.contains(e.target)) {
+        setMenu.classList.remove('open'); setBtn.classList.remove('open');
+      }
+    });
+
+    setMenu.querySelectorAll('#speedSeg button').forEach(btn => {
+      btn.onclick = () => {
+        spI = parseInt(btn.dataset.sp, 10);
+        setMenu.querySelectorAll('#speedSeg button').forEach(b => b.classList.toggle('on', b === btn));
+      };
+    });
+
+    const modeToggle = setMenu.querySelector('#modeToggle');
+    modeToggle.classList.toggle('real', !!real);
+    modeToggle.querySelectorAll('.opt').forEach(opt => {
+      opt.onclick = () => {
+        const m = parseInt(opt.dataset.mode, 10);
+        if (!!m === !!real) return;
+        real = m;
+        modeToggle.classList.toggle('real', !!real);
+        apply(); pick(ci);
+      };
+    });
+
+    setMenu.querySelector('#orbitsChk').addEventListener('change', e => {
+      orbitsVisible = e.target.checked;
+      pick(ci);
+    });
+    setMenu.querySelector('#moonLabelsChk').addEventListener('change', e => {
+      moonLabelsVisible = e.target.checked;
+      updateLabels();
+    });
+    setMenu.querySelector('#infoChk').addEventListener('change', e => {
+      infoPanelVisible = e.target.checked;
+      if (infoPanelVisible) showInfo(cur);
+      else $('#info').classList.remove('show');
+    });
+
+    /* ============ Dropdown выбора цели (второй, рядом с настройками) ============ */
     const drop = document.createElement('div'); drop.className = 'dd';
     const dropBtn = document.createElement('button'); dropBtn.className = 'dd-btn';
     const dropList = document.createElement('div'); dropList.className = 'dd-list';
 
     function pick(i) {
       const b = targets[i]; ci = i; off.copy(tgv).sub(wpos(b)); cur = b;
-      dd = b.d || (b.isSun ? (real ? sunM.scale.x * 3.5 : 100) : b.isMoon ? (real ? b.r * 8 : b.r * 7 + 6) : b.r * (real ? 5 : 7) + (real ? Math.min(6, b.r * 8) : 6));
+      dd = b.d || (b.isSun ? (real ? sunBaseScale * 3.5 : 100) : b.isMoon ? (real ? b.r * 8 : b.r * 7 + 6) : b.r * (real ? 5 : 7) + (real ? Math.min(6, b.r * 8) : 6));
       dropBtn.innerHTML = b.n + ' <span class="tri">▲</span>';
       dropList.querySelectorAll('.dd-item').forEach((el, j) => el.classList.toggle('on', j === i));
       clearLabels();
       bodies.forEach(bb => { if (bb.mo) bb.mo.forEach(p => { if (p.userData.orbit) p.userData.orbit.visible = false; }); });
       const pb = b.isMoon ? b.parent : b;
       if (pb.mo && pb.mo.length) {
-        pb.mo.forEach(p => { const ml = makeLabel(p.userData.name, true); labels.push({ el: ml, obj: p.children[0] }); if (p.userData.orbit) p.userData.orbit.visible = true; });
+        pb.mo.forEach(p => { const ml = makeLabel(p.userData.name, true); labels.push({ el: ml, obj: p.children[0], isMoon: true }); if (p.userData.orbit) p.userData.orbit.visible = orbitsVisible; });
       }
       venCtl.classList.toggle('show', !b.isMoon && b.k === 'ven');
       showInfo(b);
     }
 
-    {
-      const fsBtn = document.createElement('button'); fsBtn.id = 'fsBtn'; fsBtn.title = 'Полноэкранный режим';
-      const fsEnter = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
-      const fsExit = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
-      fsBtn.innerHTML = fsEnter;
-      fsBtn.onclick = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.(); } else { document.exitFullscreen?.() || document.webkitExitFullscreen?.(); } };
-      document.addEventListener('fullscreenchange', () => { fsBtn.innerHTML = document.fullscreenElement ? fsExit : fsEnter; });
-      document.addEventListener('webkitfullscreenchange', () => { fsBtn.innerHTML = document.fullscreenElement ? fsExit : fsEnter; });
-      bar.append(fsBtn);
-    }
-    {
-      const rb = document.createElement('button'); rb.className = 'mode'; rb.textContent = 'Упрощённый';
-      rb.onclick = () => {
-        real ^= 1;
-        rb.textContent = real ? 'Реализм' : 'Упрощённый';
-        rb.classList.toggle('on', !!real);
-        apply(); pick(ci);
-      };
-      bar.append(rb);
-    }
     dropBtn.innerHTML = 'Обзор <span class="tri">▲</span>';
     const hd = t => { const e = document.createElement('div'); e.className = 'dd-head'; e.textContent = t; return e; };
     const fp = bodies.find(b => !b.isRoot && !b.isSun && !b.dw), fd = bodies.find(b => b.dw);
@@ -1120,10 +1281,17 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     drop.append(dropBtn, dropList); bar.append(drop);
     document.addEventListener('click', () => drop.classList.remove('open'));
 
+    /* ============ Кнопка фулскрина (последняя, правый край) ============ */
     {
-      const sb = document.createElement('button'); sb.textContent = '×1'; sb.style.marginLeft = 'auto';
-      sb.onclick = () => { spI = (spI + 1) % 4; sb.textContent = ['Пауза', '×1', '×4', '×16'][spI]; };
-      bar.append(sb);
+      const fsBtn = document.createElement('button'); fsBtn.id = 'fsBtn'; fsBtn.title = 'Полноэкранный режим';
+      const fsEnter = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+      const fsExit = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
+      fsBtn.innerHTML = fsEnter;
+      fsBtn.style.marginLeft = 'auto';
+      fsBtn.onclick = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.(); } else { document.exitFullscreen?.() || document.webkitExitFullscreen?.(); } };
+      document.addEventListener('fullscreenchange', () => { fsBtn.innerHTML = document.fullscreenElement ? fsExit : fsEnter; });
+      document.addEventListener('webkitfullscreenchange', () => { fsBtn.innerHTML = document.fullscreenElement ? fsExit : fsEnter; });
+      bar.append(fsBtn);
     }
 
     apply(); pick(0);
@@ -1137,21 +1305,46 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
         fpsEl.textContent = Math.round(_fFrames / _fAccum) + ' FPS';
         _fFrames = 0; _fAccum = 0;
       }
-      const s = [0, 1, 4, 16][spI], q = Math.sqrt(s); tm += dt * s; mt += dt * q;
+      const s = SPEEDS[spI], q = Math.sqrt(s); tm += dt * s; mt += dt * q;
       sunM.rotation.y += dt * .004 * q;
+
+      const M = SUN_GLOW_BASE;
       if (real) {
-        glow.material.opacity = 0.95 + 0.05 * Math.sin(now / 600);
-        gl2.material.opacity = 0.88 + 0.05 * Math.sin(now / 700);
-        gl3.material.opacity = 0.50 + 0.05 * Math.sin(now / 800);
-        gl4.material.opacity = 0.28 + 0.04 * Math.sin(now / 900);
-        gl5.material.opacity = 0.15 + 0.03 * Math.sin(now / 1100);
+        glow.material.opacity = Math.min(1, (0.95 + 0.05 * Math.sin(now / 600)) * M);
+        gl2.material.opacity  = Math.min(1, (0.88 + 0.05 * Math.sin(now / 700)) * M);
+        gl3.material.opacity  = Math.min(1, (0.50 + 0.05 * Math.sin(now / 800)) * M);
+        gl4.material.opacity  = Math.min(1, (0.28 + 0.04 * Math.sin(now / 900)) * M);
+        gl5.material.opacity  = Math.min(1, (0.15 + 0.03 * Math.sin(now / 1100)) * M);
       } else {
-        glow.material.opacity = 0.85 + 0.1 * Math.sin(now / 600);
-        gl3.material.opacity = 0.28 + 0.04 * Math.sin(now / 900);
-        gl4.material.opacity = 0.16 + 0.03 * Math.sin(now / 1000);
-        gl5.material.opacity = 0.09 + 0.02 * Math.sin(now / 1200);
+        glow.material.opacity = Math.min(1, (0.85 + 0.10 * Math.sin(now / 600)) * M);
+        gl2.material.opacity  = Math.min(1, 0.55 * M);
+        gl3.material.opacity  = Math.min(1, (0.28 + 0.04 * Math.sin(now / 900)) * M);
+        gl4.material.opacity  = Math.min(1, (0.16 + 0.03 * Math.sin(now / 1000)) * M);
+        gl5.material.opacity  = Math.min(1, (0.09 + 0.02 * Math.sin(now / 1200)) * M);
       }
-      place(); updateLocalOrbit();
+
+      {
+        const distSun = C.position.distanceTo(sunM.position);
+
+        const minPx = 3;
+        const minAng = minPx * (C.fov * PI / 180) / innerHeight;
+        const sunRvis = Math.max(sunBaseScale, distSun * minAng * 0.5);
+        sunM.scale.setScalar(sunRvis);
+
+        const refDist = real ? AU_TO_UNITS * 3 : 40;
+        const grow = 1 + Math.min(distSun / refDist, 2);
+        const glFarScale = Math.max(sunM.scale.x * 1.5, distSun * 0.04 * grow);
+        glFar.scale.set(glFarScale, glFarScale, 1);
+
+        const bBase = real ? 0.38 : 0.26;
+        const bMul  = 1 + Math.min(distSun / refDist, 2);
+        const pulse = (real ? 0.06 : 0.04) * Math.sin(now / 700);
+        glFar.material.opacity = Math.max(0, Math.min(1, (bBase * bMul + pulse) * M));
+      }
+
+      place();
+      for (const b of bodies) { if (b.ln) b.ln.visible = orbitsVisible; }
+      updateLocalOrbit();
       for (const b of bodies) {
         if (b.isRoot || b.isSun) continue;
         b.m.rotation.y += dt * q * (b.k in SPIN ? SPIN[b.k] : b.T > 5 ? .3 : .14);
@@ -1162,27 +1355,48 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
       }
       belts.forEach((bt, k) => { bt.rotation.y = tm * bt.userData.w; bms[k].rotation.y = bt.rotation.y; });
       kbs.forEach(k => { k.rotation.y = tm * k.userData.w; });
+
+      {
+        const camAU = C.position.length() / AU_TO_UNITS;
+        belts.forEach((bt, k) => {
+          if (real) {
+            const dAU = Math.abs(camAU - BC[k].c);
+            const fade = Math.max(0.05, Math.min(1, 1 - (dAU - 3) / 17));
+            bms[k].material.opacity = 0.36 * fade;
+          } else {
+            bms[k].material.opacity = 0.36;
+          }
+        });
+        kbs.forEach((kb, k) => {
+          if (real) {
+            const dAU = Math.abs(camAU - KC[k].c);
+            const fade = Math.max(0.05, Math.min(1, 1 - (dAU - 3) / 17));
+            kb.material.opacity = 0.48 * fade;
+          } else {
+            kb.material.opacity = 0.48;
+          }
+        });
+      }
+
       off.multiplyScalar(Math.exp(-dt * 4)); tgv.copy(wpos(cur)).add(off);
       dist += (dd - dist) * Math.min(1, dt * 6);
       C.position.set(tgv.x + dist * Math.sin(ph) * Math.sin(th), tgv.y + dist * Math.cos(ph), tgv.z + dist * Math.sin(ph) * Math.cos(th));
       C.lookAt(tgv);
       C.near = Math.max(dist * .004, .0005); C.far = 1e8; C.updateProjectionMatrix();
       sky.scale.setScalar(Math.max(1, dist / 1000)); sky.position.copy(C.position);
-      glow.position.copy(sunM.position); gl2.position.copy(sunM.position); gl3.position.copy(sunM.position); gl4.position.copy(sunM.position); gl5.position.copy(sunM.position);
+      glow.position.copy(sunM.position); gl2.position.copy(sunM.position); gl3.position.copy(sunM.position); gl4.position.copy(sunM.position); gl5.position.copy(sunM.position); glFar.position.copy(sunM.position);
       C.updateMatrixWorld(); C.matrixWorldInverse.copy(C.matrixWorld).invert();
       earthU.uSunV.value.copy(earthB.g.position).negate().normalize().transformDirection(C.matrixWorldInverse);
 
       if (skySphere) {
         let bright = SIM_SKY_BRIGHT;
         if (real) {
-          let rAU;
-          if (cur.isSun || cur.isRoot) rAU = 0;
-          else if (cur.isMoon) rAU = cur.parent.g.position.length() / AU_TO_UNITS;
-          else rAU = cur.g.position.length() / AU_TO_UNITS;
-          const t = Math.min(rAU / SKY_REF, 1);
-          bright = SKY_SUN + (1 - SKY_SUN) * t;
+          const camR = C.position.length() / AU_TO_UNITS;
+          const t = Math.min(camR / SKY_REF, 1);
+          bright = (SKY_SUN + (1 - SKY_SUN) * t) * SKY_DIM_MUL;
         }
-        skySphere.userData.uni.uBright.value = bright;
+        skySphere.userData.uni.uBright.value = Math.max(0, bright);
+        skySphere.userData.uni.uLinear.value = real ? 1 : 0;
       }
 
       let sOf = null;
