@@ -13,6 +13,14 @@ button{flex:none;border:1px solid rgba(255,255,255,.15);background:var(--chip);c
 button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 button.mode{background:rgba(60,120,220,.35)}
 #fsBtn{width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px;flex:none}
+#fps{
+  position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:8px;z-index:6;
+  font:11px ui-monospace,monospace;color:var(--fg);opacity:.55;
+  background:rgba(12,16,28,.5);padding:3px 7px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(6px);
+  pointer-events:none;user-select:none;min-width:56px;text-align:center;
+  transition:opacity .3s;
+}
 #load{position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .6s}
 #load.done{opacity:0;pointer-events:none}
 #load .spinner{
@@ -1052,6 +1060,11 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     }
 
     const bar = $('#bar');
+    const fpsEl = document.createElement('div');
+    fpsEl.id = 'fps';
+    fpsEl.textContent = '— FPS';
+    document.body.append(fpsEl);
+    let _fFrames = 0, _fAccum = 0;
     const drop = document.createElement('div'); drop.className = 'dd';
     const dropBtn = document.createElement('button'); dropBtn.className = 'dd-btn';
     const dropList = document.createElement('div'); dropList.className = 'dd-list';
@@ -1119,6 +1132,11 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     function loop(now) {
       requestAnimationFrame(loop);
       const dt = Math.min((now - last) / 1000, .05); last = now;
+      _fFrames++; _fAccum += dt;
+      if (_fAccum >= 0.5) {
+        fpsEl.textContent = Math.round(_fFrames / _fAccum) + ' FPS';
+        _fFrames = 0; _fAccum = 0;
+      }
       const s = [0, 1, 4, 16][spI], q = Math.sqrt(s); tm += dt * s; mt += dt * q;
       sunM.rotation.y += dt * .004 * q;
       if (real) {
