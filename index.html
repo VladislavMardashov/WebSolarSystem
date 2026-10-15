@@ -11,31 +11,14 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:
 #bar{position:fixed;left:0;right:0;bottom:0;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;align-items:center;justify-content:flex-start;overflow:visible;flex-wrap:nowrap}
 button{flex:none;border:1px solid rgba(255,255,255,.15);background:var(--chip);color:var(--fg);padding:10px 14px;border-radius:99px;font:inherit;backdrop-filter:blur(8px);cursor:pointer}
 button.on{background:var(--acc);color:#111;border-color:var(--acc)}
-button.mode{background:rgba(60,120,220,.35)}
 #fsBtn,#setBtn{width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px;flex:none}
 #setBtn svg{transition:transform .25s}
 #setBtn.open{background:var(--acc);color:#111;border-color:var(--acc)}
 #setBtn.open svg{transform:rotate(60deg)}
-#fps{
-  position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:8px;z-index:6;
-  font:11px ui-monospace,monospace;color:var(--fg);opacity:.55;
-  background:rgba(12,16,28,.5);padding:3px 7px;border-radius:8px;
-  border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(6px);
-  pointer-events:none;user-select:none;min-width:56px;text-align:center;
-  transition:opacity .3s;
-}
+#fps{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:8px;z-index:6;font:11px ui-monospace,monospace;color:var(--fg);opacity:.55;background:rgba(12,16,28,.5);padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(6px);pointer-events:none;user-select:none;min-width:56px;text-align:center;transition:opacity .3s}
 #load{position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .6s}
 #load.done{opacity:0;pointer-events:none}
-#load .spinner{
-  width:48px;height:48px;
-  border:3px solid rgba(255,255,255,.15);
-  border-top-color:var(--acc);
-  border-radius:50%;
-  animation:_spin 1s linear infinite;
-  display:block;
-  flex:none;
-  box-sizing:border-box;
-}
+#load .spinner{width:48px;height:48px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--acc);border-radius:50%;animation:_spin 1s linear infinite;display:block;flex:none;box-sizing:border-box}
 @keyframes _spin{to{transform:rotate(360deg)}}
 #load .pb{width:min(260px,70vw);height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
 #load .pb i{display:block;height:100%;width:0;background:var(--acc);transition:width .25s}
@@ -67,111 +50,32 @@ button.mode{background:rgba(60,120,220,.35)}
 .label.show{opacity:1}
 .label.moon{font-size:11px;font-weight:400}
 .label.moon.show{opacity:.85}
-
-#venAtmCtl{
-  position:fixed;right:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:25;
-  background:rgba(12,16,28,.92);border:1px solid rgba(255,255,255,.18);border-radius:10px;
-  backdrop-filter:blur(12px);box-shadow:0 6px 22px rgba(0,0,0,.5);
-  padding:10px 12px;display:none;align-items:center;gap:10px;font-size:11px;user-select:none;
-}
+#venAtmCtl{position:fixed;right:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:25;background:rgba(12,16,28,.92);border:1px solid rgba(255,255,255,.18);border-radius:10px;backdrop-filter:blur(12px);box-shadow:0 6px 22px rgba(0,0,0,.5);padding:10px 12px;display:none;align-items:center;gap:10px;font-size:11px;user-select:none}
 #venAtmCtl.show{display:flex}
 #venAtmCtl label{opacity:.75;font-size:11px}
 #venAtmCtl input[type=range]{width:130px;accent-color:var(--acc);cursor:pointer}
 #venAtmCtl .v{font-family:ui-monospace,monospace;font-size:10.5px;color:#e9edf5;min-width:40px;text-align:right;opacity:.9}
-
-#nrmCtl{
-  position:fixed;right:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:25;
-  background:rgba(12,16,28,.92);border:1px solid rgba(255,255,255,.18);border-radius:10px;
-  backdrop-filter:blur(12px);box-shadow:0 6px 22px rgba(0,0,0,.5);
-  padding:10px 12px;display:none;flex-direction:column;gap:7px;font-size:11px;user-select:none;
-  min-width:250px;
-}
-#nrmCtl.show{display:flex}
-#nrmCtl .title{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;opacity:.55;padding:0 2px 4px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:2px}
-#nrmCtl .row{display:flex;align-items:center;gap:8px;justify-content:space-between}
-#nrmCtl label{opacity:.75;font-size:11px;flex:none;min-width:72px}
-#nrmCtl input[type=range]{flex:1;width:auto;accent-color:var(--acc);cursor:pointer;min-width:80px}
-#nrmCtl .v{font-family:ui-monospace,monospace;font-size:10.5px;color:#e9edf5;min-width:36px;text-align:right;opacity:.9}
-#nrmCtl .reset{margin-top:2px;padding:6px 10px;font-size:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--fg);border-radius:6px;cursor:pointer;width:100%;font:inherit}
-#nrmCtl .reset:hover{background:rgba(255,255,255,.12)}
-
-/* ============ Меню настроек ============ */
-#settingsMenu{
-  position:fixed;left:8px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:35;
-  display:flex;flex-direction:column;gap:10px;
-  background:rgba(12,16,28,.95);border:1px solid rgba(255,255,255,.18);border-radius:14px;
-  backdrop-filter:blur(14px);box-shadow:0 12px 32px rgba(0,0,0,.6);
-  padding:12px;min-width:240px;
-  opacity:0;visibility:hidden;transform:translateY(8px) scale(.98);
-  transition:opacity .18s,transform .18s,visibility 0s linear .18s;
-  pointer-events:none;
-}
-#settingsMenu.open{
-  opacity:1;visibility:visible;transform:translateY(0) scale(1);
-  transition:opacity .18s,transform .18s,visibility 0s;
-  pointer-events:auto;
-}
+#settingsMenu{position:fixed;left:8px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:35;display:flex;flex-direction:column;gap:10px;background:rgba(12,16,28,.95);border:1px solid rgba(255,255,255,.18);border-radius:14px;backdrop-filter:blur(14px);box-shadow:0 12px 32px rgba(0,0,0,.6);padding:12px;min-width:240px;opacity:0;visibility:hidden;transform:translateY(8px) scale(.98);transition:opacity .18s,transform .18s,visibility 0s linear .18s;pointer-events:none}
+#settingsMenu.open{opacity:1;visibility:visible;transform:translateY(0) scale(1);transition:opacity .18s,transform .18s,visibility 0s;pointer-events:auto}
 #settingsMenu .section{display:flex;flex-direction:column;gap:6px}
-#settingsMenu .section-label{
-  font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;
-  color:var(--fg);opacity:.5;padding:0 4px;
-}
-#settingsMenu .seg{
-  display:flex;gap:2px;background:rgba(255,255,255,.05);border-radius:10px;padding:3px;
-}
-#settingsMenu .seg button{
-  flex:1;border:none;background:transparent;color:var(--fg);
-  padding:7px 6px;border-radius:7px;font:inherit;font-size:12px;cursor:pointer;
-  transition:background .15s,color .15s;white-space:nowrap;
-}
+#settingsMenu .section-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--fg);opacity:.5;padding:0 4px}
+#settingsMenu .seg{display:flex;gap:2px;background:rgba(255,255,255,.05);border-radius:10px;padding:3px}
+#settingsMenu .seg button{flex:1;border:none;background:transparent;color:var(--fg);padding:7px 6px;border-radius:7px;font:inherit;font-size:12px;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
 #settingsMenu .seg button:hover{background:rgba(255,255,255,.06)}
 #settingsMenu .seg button.on{background:var(--acc);color:#111}
-#settingsMenu .toggle{
-  position:relative;display:flex;background:rgba(255,255,255,.05);
-  border-radius:10px;padding:3px;cursor:pointer;user-select:none;
-}
-#settingsMenu .toggle .thumb{
-  position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:calc(100% - 6px);
-  background:linear-gradient(135deg,rgba(60,120,220,.9),rgba(90,160,255,.7));
-  border-radius:7px;
-  transition:transform .28s cubic-bezier(.4,.2,.2,1),background .28s;
-  box-shadow:0 2px 8px rgba(60,120,220,.45);
-}
-#settingsMenu .toggle.real .thumb{
-  transform:translateX(100%);
-  background:linear-gradient(135deg,var(--acc),#ffd280);
-  box-shadow:0 2px 8px rgba(255,179,71,.5);
-}
-#settingsMenu .toggle .opt{
-  flex:1;text-align:center;padding:7px 10px;font-size:12px;z-index:2;
-  position:relative;transition:color .2s;color:var(--fg);
-}
-#settingsMenu .row{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:4px;font-size:12.5px;
-}
+#settingsMenu .toggle{position:relative;display:flex;background:rgba(255,255,255,.05);border-radius:10px;padding:3px;cursor:pointer;user-select:none}
+#settingsMenu .toggle .thumb{position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:calc(100% - 6px);background:linear-gradient(135deg,rgba(60,120,220,.9),rgba(90,160,255,.7));border-radius:7px;transition:transform .28s cubic-bezier(.4,.2,.2,1),background .28s;box-shadow:0 2px 8px rgba(60,120,220,.45)}
+#settingsMenu .toggle.real .thumb{transform:translateX(100%);background:linear-gradient(135deg,var(--acc),#ffd280);box-shadow:0 2px 8px rgba(255,179,71,.5)}
+#settingsMenu .toggle .opt{flex:1;text-align:center;padding:7px 10px;font-size:12px;z-index:2;position:relative;transition:color .2s;color:var(--fg)}
+#settingsMenu .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px;font-size:12.5px}
 #settingsMenu .sw{position:relative;width:36px;height:20px;flex:none;display:inline-block}
 #settingsMenu .sw input{opacity:0;width:0;height:0;position:absolute}
-#settingsMenu .sw span{
-  position:absolute;inset:0;background:rgba(255,255,255,.1);border-radius:99px;
-  cursor:pointer;transition:background .2s;
-}
-#settingsMenu .sw span::before{
-  content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;
-  background:var(--fg);border-radius:50%;transition:transform .2s,background .2s;
-}
+#settingsMenu .sw span{position:absolute;inset:0;background:rgba(255,255,255,.1);border-radius:99px;cursor:pointer;transition:background .2s}
+#settingsMenu .sw span::before{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;background:var(--fg);border-radius:50%;transition:transform .2s,background .2s}
 #settingsMenu .sw input:checked + span{background:var(--acc)}
 #settingsMenu .sw input:checked + span::before{transform:translateX(16px);background:#111}
 #settingsMenu .divider{height:1px;background:rgba(255,255,255,.08);margin:2px 0}
-
-/* Панель ошибок */
-#errPanel{
-  position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top,0px));
-  z-index:9999;background:rgba(180,30,30,.95);color:#fff;
-  border-radius:10px;padding:8px 12px;font:12px ui-monospace,monospace;
-  max-height:38vh;overflow:auto;display:none;white-space:pre-wrap;word-break:break-word;
-  box-shadow:0 6px 20px rgba(0,0,0,.6);
-}
+#errPanel{position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:9999;background:rgba(180,30,30,.95);color:#fff;border-radius:10px;padding:8px 12px;font:12px ui-monospace,monospace;max-height:38vh;overflow:auto;display:none;white-space:pre-wrap;word-break:break-word;box-shadow:0 6px 20px rgba(0,0,0,.6)}
 #errPanel.show{display:block}
 #errPanel .h{font-weight:600;margin-bottom:4px;cursor:pointer;user-select:none}
 #errPanel .line{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.15)}
@@ -179,1429 +83,281 @@ button.mode{background:rgba(60,120,220,.35)}
 </style>
 </head>
 <body>
-<div id="load">
-  <div class="spinner" aria-label="Загрузка"></div>
-  <div class="pb"><i></i></div>
-  <div class="tx">Загрузка…</div>
-</div>
+<div id="load"><div class="spinner" aria-label="Загрузка"></div><div class="pb"><i></i></div><div class="tx">Загрузка…</div></div>
 <div id="info"></div>
 <div id="bar"></div>
 <div id="errPanel"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-/* ========== ПАНЕЛЬ ОШИБОК ========== */
-const errPanel = document.getElementById('errPanel');
-let errCount = 0, errCollapsed = false;
-function showError(msg) {
-  errCount++;
-  errPanel.classList.add('show');
-  if (errCount === 1) {
-    errPanel.innerHTML = '<div class="h">Ошибки (' + errCount + ') — тап чтобы свернуть</div>';
-    errPanel.querySelector('.h').addEventListener('click', () => {
-      errCollapsed = !errCollapsed;
-      errPanel.querySelector('.h').textContent = 'Ошибки (' + errCount + ') — тап чтобы ' + (errCollapsed ? 'развернуть' : 'свернуть');
-      errPanel.querySelectorAll('.line').forEach(el => el.style.display = errCollapsed ? 'none' : 'block');
-    });
-  } else {
-    errPanel.querySelector('.h').textContent = 'Ошибки (' + errCount + ') — тап чтобы ' + (errCollapsed ? 'развернуть' : 'свернуть');
-  }
-  const line = document.createElement('div');
-  line.className = 'line';
-  line.textContent = msg;
-  if (errCollapsed) line.style.display = 'none';
-  errPanel.append(line);
-  console.error(msg);
-}
-window.addEventListener('error', e => showError('[error] ' + (e.message || e.error || 'unknown')));
-window.addEventListener('unhandledrejection', e => showError('[promise] ' + (e.reason && e.reason.message || e.reason || 'unknown')));
-
-/* ========== БЕЗОПАСНОЕ ХРАНИЛИЩЕ ========== */
-const safeStorage = {
-  available: false,
-  get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
-  set(k, v) { try { window.localStorage.setItem(k, v); return true; } catch (e) { return false; } },
-  remove(k) { try { window.localStorage.removeItem(k); return true; } catch (e) { return false; } }
-};
-try { window.localStorage.getItem('__probe__'); safeStorage.available = true; } catch (e) {}
-
-/* ========== ВЫБОР КАЧЕСТВА ЧЕРЕЗ URL-ХЭШ ========== */
-function getQualityFromHash() {
-  const m = (location.hash || '').match(/[#&]?q=(auto|high|medium|low)/);
-  return m ? m[1] : null;
-}
-
-/* ========== ОПРЕДЕЛЕНИЕ УРОВНЯ КАЧЕСТВА ========== */
-let AUTO_QUALITY = 'high';
-try {
-  const mem = navigator.deviceMemory;
-  const cores = navigator.hardwareConcurrency || 4;
-  if (mem !== undefined && mem <= 2) AUTO_QUALITY = 'low';
-  else if (cores <= 2) AUTO_QUALITY = 'low';
-  else if (mem !== undefined && mem <= 4) AUTO_QUALITY = 'medium';
-  else if (cores <= 4) AUTO_QUALITY = 'medium';
-  else AUTO_QUALITY = 'high';
-} catch (e) { /* silent */ }
-
-const QUALITY_LEVELS = {
-  high: {
-    maxTexDim: 4096, shadowSize: 4096, skySize: 4096, dpr: 2,
-    normalAll: true, normalMarsOnly: false,
-    asteroidMul: 1.0, kuiperMul: 1.0, atmSteps: 5
-  },
-  medium: {
-    maxTexDim: 2048, shadowSize: 2048, skySize: 4000, dpr: 1.5,
-    normalAll: true, normalMarsOnly: false,
-    asteroidMul: 0.4, kuiperMul: 0.4, atmSteps: 5
-  },
-  low: {
-    maxTexDim: 1024, shadowSize: 1024, skySize: 1024, dpr: 1,
-    normalAll: false, normalMarsOnly: true,
-    asteroidMul: 0.2, kuiperMul: 0.2, atmSteps: 3
-  }
-};
-
-const QUALITY_STORAGE_KEY = 'solar-quality';
-let USER_QUALITY = 'auto';
-const hashQ = getQualityFromHash();
-if (hashQ) {
-  USER_QUALITY = hashQ;
-} else {
-  const storedQ = safeStorage.get(QUALITY_STORAGE_KEY);
-  if (storedQ && QUALITY_LEVELS[storedQ]) USER_QUALITY = storedQ;
-}
-let QUALITY = USER_QUALITY === 'auto' ? AUTO_QUALITY : USER_QUALITY;
-if (!QUALITY_LEVELS[QUALITY]) QUALITY = AUTO_QUALITY;
-const Q = QUALITY_LEVELS[QUALITY];
-
-console.log('[quality] режим=' + USER_QUALITY + ' → активен=' + QUALITY, {
-  cores: navigator.hardwareConcurrency,
-  memoryGB: navigator.deviceMemory,
-  maxTexDim: Q.maxTexDim, shadow: Q.shadowSize, sky: Q.skySize, dpr: Q.dpr,
-  storageAvailable: safeStorage.available
-});
-
-/* ========== WEB WORKER ========== */
-const WORKER_SRC = `
-self.onmessage = async (e) => {
-  const { url, id, timeoutMs, maxDim } = e.data;
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), timeoutMs || 20000);
-  try {
-    const res = await fetch(url, { signal: ctl.signal, mode: 'cors' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const blob = await res.blob();
-    const bitmap = await createImageBitmap(blob);
-    clearTimeout(timer);
-    let W = bitmap.width, H = bitmap.height;
-    if (maxDim && (W > maxDim || H > maxDim)) {
-      const s = Math.min(maxDim / W, maxDim / H);
-      W = Math.max(64, Math.floor(W * s));
-      H = Math.max(32, Math.floor(H * s));
-    }
-    const canvas = new OffscreenCanvas(W, H);
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(bitmap, 0, 0, W, H);
-    const imageData = ctx.getImageData(0, 0, W, H);
-    const buffer = imageData.data.buffer;
-    self.postMessage({ id, ok: true, width: W, height: H, buffer }, [buffer]);
-  } catch (err) {
-    clearTimeout(timer);
-    self.postMessage({ id, ok: false, error: (err && (err.name === 'AbortError' ? 'timeout' : err.message)) || 'error' });
-  }
-};
-`;
-const workerBlob = new Blob([WORKER_SRC], { type: 'application/javascript' });
-const workerUrl = URL.createObjectURL(workerBlob);
-
-/* ========== INDEXEDDB ========== */
-const DB_NAME = 'solar-tex-cache-v9';
-const DB_VERSION = 1;
-const STORE = 'textures';
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(STORE)) req.result.createObjectStore(STORE);
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-async function idbGet(key) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).get(key);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
-}
-async function idbPut(key, value) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(value, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-/* ========== ТЕКСТУРЫ ========== */
-function configurePlanetTexture(tex) {
-  if (!tex) return tex;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.flipY = true;
-  tex.anisotropy = Math.min(8, (typeof renderer !== 'undefined' && renderer.capabilities)
-    ? renderer.capabilities.getMaxAnisotropy() : 4);
-  tex.minFilter = THREE.LinearMipmapLinearFilter;
-  tex.magFilter = THREE.LinearFilter;
-  tex.generateMipmaps = true;
-  tex.needsUpdate = true;
-  return tex;
-}
-function cropTextureX(tex, px) {
-  if (!tex || !tex.image || !tex.image.data) return tex;
-  const w = tex.image.width, h = tex.image.height;
-  if (px <= 0 || w - px * 2 < 8) return tex;
-  const src = tex.image.data;
-  const nw = w - px * 2;
-  const out = new Uint8Array(nw * h * 4);
-  for (let y = 0; y < h; y++) {
-    const rowSrc = y * w, rowDst = y * nw;
-    for (let x = 0; x < nw; x++) {
-      const si = (rowSrc + x + px) * 4;
-      const di = (rowDst + x) * 4;
-      out[di] = src[si]; out[di + 1] = src[si + 1];
-      out[di + 2] = src[si + 2]; out[di + 3] = src[si + 3];
-    }
-  }
-  const t = new THREE.DataTexture(out, nw, h, THREE.RGBAFormat);
-  t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; t.flipY = tex.flipY;
-  t.anisotropy = tex.anisotropy; t.minFilter = tex.minFilter;
-  t.magFilter = tex.magFilter; t.generateMipmaps = tex.generateMipmaps;
-  t.needsUpdate = true;
-  return t;
-}
-
-let MAX_TEX_DIM = Q.maxTexDim;
-let _idbProbed = false, _idbOk = false;
-async function probeIDB() {
-  if (_idbProbed) return _idbOk;
-  _idbProbed = true;
-  try { const db = await openDB(); db.close(); _idbOk = true; }
-  catch (e) { _idbOk = false; console.warn('[idb] кэш недоступен:', e.message || e); }
-  return _idbOk;
-}
-
-async function loadTextureNoCache(url, ctx = 'tex', timeoutMs = 20000, maxDim) {
-  console.log(`${ctx}: GET ${url}`);
-  const result = await new Promise((resolve, reject) => {
-    const id = Math.random().toString(36).slice(2);
-    const handler = (e) => {
-      if (e.data.id !== id) return;
-      worker.removeEventListener('message', handler);
-      if (e.data.ok) resolve(e.data);
-      else reject(new Error(e.data.error));
-    };
-    worker.addEventListener('message', handler);
-    worker.postMessage({ url, id, timeoutMs: timeoutMs || 20000, maxDim: maxDim || MAX_TEX_DIM });
-  });
-  const data = new Uint8Array(result.buffer);
-  const tex = new THREE.DataTexture(data, result.width, result.height, THREE.RGBAFormat);
-  return configurePlanetTexture(tex);
-}
-
-async function loadTexture(url, ctx = 'tex', timeoutMs = 20000) {
-  const cacheKey = 'tex:' + url;
-  const idbOk = await probeIDB();
-  if (idbOk) {
-    try {
-      const cached = await idbGet(cacheKey);
-      if (cached && cached.width && cached.height && cached.buffer) {
-        const data = new Uint8Array(cached.buffer);
-        const tex = new THREE.DataTexture(data, cached.width, cached.height, THREE.RGBAFormat);
-        console.log(`${ctx}: из кэша ${cached.width}x${cached.height}`);
-        return configurePlanetTexture(tex);
-      }
-    } catch (e) { console.warn(`${ctx}: кэш чтение — ${e.message || e}`); }
-  }
-  const result = await new Promise((resolve, reject) => {
-    const id = Math.random().toString(36).slice(2);
-    const handler = (e) => {
-      if (e.data.id !== id) return;
-      worker.removeEventListener('message', handler);
-      if (e.data.ok) resolve(e.data);
-      else reject(new Error(e.data.error));
-    };
-    worker.addEventListener('message', handler);
-    worker.postMessage({ url, id, timeoutMs: timeoutMs || 20000, maxDim: MAX_TEX_DIM });
-  });
-  if (idbOk) {
-    try { await idbPut(cacheKey, { width: result.width, height: result.height, buffer: result.buffer.slice(0) }); }
-    catch (e) { console.warn(`${ctx}: кэш запись — ${e.message || e}`); }
-  }
-  const data = new Uint8Array(result.buffer);
-  const tex = new THREE.DataTexture(data, result.width, result.height, THREE.RGBAFormat);
-  return configurePlanetTexture(tex);
-}
-
-/* ========== ОСНОВНОЙ КОД ========== */
-const TH = THREE, PI = Math.PI, $ = s => document.querySelector(s), rnd = Math.random;
+const errPanel=document.getElementById('errPanel');let errCount=0,errCollapsed=false;
+function showError(msg){errCount++;errPanel.classList.add('show');if(errCount===1){errPanel.innerHTML='<div class="h">Ошибки ('+errCount+') — тап чтобы свернуть</div>';errPanel.querySelector('.h').addEventListener('click',()=>{errCollapsed=!errCollapsed;errPanel.querySelector('.h').textContent='Ошибки ('+errCount+') — тап чтобы '+(errCollapsed?'развернуть':'свернуть');errPanel.querySelectorAll('.line').forEach(el=>el.style.display=errCollapsed?'none':'block');});}else{errPanel.querySelector('.h').textContent='Ошибки ('+errCount+') — тап чтобы '+(errCollapsed?'развернуть':'свернуть');}const line=document.createElement('div');line.className='line';line.textContent=msg;if(errCollapsed)line.style.display='none';errPanel.append(line);console.error(msg);}
+window.addEventListener('error',e=>showError('[error] '+(e.message||e.error||'unknown')));
+window.addEventListener('unhandledrejection',e=>showError('[promise] '+((e.reason&&e.reason.message)||e.reason||'unknown')));
+const safeStorage={available:false,get(k){try{return window.localStorage.getItem(k);}catch(e){return null;}},set(k,v){try{window.localStorage.setItem(k,v);return true;}catch(e){return false;}},remove(k){try{window.localStorage.removeItem(k);return true;}catch(e){return false;}}};
+try{window.localStorage.getItem('__probe__');safeStorage.available=true;}catch(e){}
+function getQualityFromHash(){const m=(location.hash||'').match(/[#&]?q=(auto|high|medium|low)/);return m?m[1]:null;}
+let AUTO_QUALITY='high';
+try{const mem=navigator.deviceMemory;const cores=navigator.hardwareConcurrency||4;if(mem!==undefined&&mem<=2)AUTO_QUALITY='low';else if(cores<=2)AUTO_QUALITY='low';else if(mem!==undefined&&mem<=4)AUTO_QUALITY='medium';else if(cores<=4)AUTO_QUALITY='medium';else AUTO_QUALITY='high';}catch(e){}
+const QUALITY_LEVELS={high:{maxTexDim:4096,shadowSize:4096,skySize:4096,dpr:2,normalAll:true,normalMarsOnly:false,asteroidMul:1.0,kuiperMul:1.0,atmSteps:5},medium:{maxTexDim:2048,shadowSize:2048,skySize:4000,dpr:1.5,normalAll:true,normalMarsOnly:false,asteroidMul:0.4,kuiperMul:0.4,atmSteps:5},low:{maxTexDim:1024,shadowSize:1024,skySize:1024,dpr:1,normalAll:false,normalMarsOnly:true,asteroidMul:0.2,kuiperMul:0.2,atmSteps:3}};
+const QUALITY_STORAGE_KEY='solar-quality';let USER_QUALITY='auto';
+const hashQ=getQualityFromHash();
+if(hashQ){USER_QUALITY=hashQ;}else{const storedQ=safeStorage.get(QUALITY_STORAGE_KEY);if(storedQ&&QUALITY_LEVELS[storedQ])USER_QUALITY=storedQ;}
+let QUALITY=USER_QUALITY==='auto'?AUTO_QUALITY:USER_QUALITY;
+if(!QUALITY_LEVELS[QUALITY])QUALITY=AUTO_QUALITY;
+const Q=QUALITY_LEVELS[QUALITY];
+console.log('[quality] режим='+USER_QUALITY+' → активен='+QUALITY,{cores:navigator.hardwareConcurrency,memoryGB:navigator.deviceMemory,maxTexDim:Q.maxTexDim,shadow:Q.shadowSize,sky:Q.skySize,dpr:Q.dpr,storageAvailable:safeStorage.available});
+const WORKER_SRC=`self.onmessage=async(e)=>{const{url,id,timeoutMs,maxDim}=e.data;const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),timeoutMs||20000);try{const res=await fetch(url,{signal:ctl.signal,mode:'cors'});if(!res.ok)throw new Error('HTTP '+res.status);const blob=await res.blob();const bitmap=await createImageBitmap(blob);clearTimeout(timer);let W=bitmap.width,H=bitmap.height;if(maxDim&&(W>maxDim||H>maxDim)){const s=Math.min(maxDim/W,maxDim/H);W=Math.max(64,Math.floor(W*s));H=Math.max(32,Math.floor(H*s));}const canvas=new OffscreenCanvas(W,H);const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(bitmap,0,0,W,H);const imageData=ctx.getImageData(0,0,W,H);const buffer=imageData.data.buffer;self.postMessage({id,ok:true,width:W,height:H,buffer},[buffer]);}catch(err){clearTimeout(timer);self.postMessage({id,ok:false,error:(err&&(err.name==='AbortError'?'timeout':err.message))||'error'});}};`;
+const workerBlob=new Blob([WORKER_SRC],{type:'application/javascript'});const workerUrl=URL.createObjectURL(workerBlob);
+const DB_NAME='solar-tex-cache-v9',DB_VERSION=1,STORE='textures';
+function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE);};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+async function idbGet(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readonly');const req=tx.objectStore(STORE).get(key);req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error);});}
+async function idbPut(key,value){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(value,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}
+function configurePlanetTexture(tex){if(!tex)return tex;tex.wrapS=THREE.RepeatWrapping;tex.wrapT=THREE.ClampToEdgeWrapping;tex.flipY=true;tex.anisotropy=Math.min(8,(typeof renderer!=='undefined'&&renderer.capabilities)?renderer.capabilities.getMaxAnisotropy():4);tex.minFilter=THREE.LinearMipmapLinearFilter;tex.magFilter=THREE.LinearFilter;tex.generateMipmaps=true;tex.needsUpdate=true;return tex;}
+function cropTextureX(tex,px){if(!tex||!tex.image||!tex.image.data)return tex;const w=tex.image.width,h=tex.image.height;if(px<=0||w-px*2<8)return tex;const src=tex.image.data;const nw=w-px*2;const out=new Uint8Array(nw*h*4);for(let y=0;y<h;y++){const rowSrc=y*w,rowDst=y*nw;for(let x=0;x<nw;x++){const si=(rowSrc+x+px)*4;const di=(rowDst+x)*4;out[di]=src[si];out[di+1]=src[si+1];out[di+2]=src[si+2];out[di+3]=src[si+3];}}const t=new THREE.DataTexture(out,nw,h,THREE.RGBAFormat);t.wrapS=tex.wrapS;t.wrapT=tex.wrapT;t.flipY=tex.flipY;t.anisotropy=tex.anisotropy;t.minFilter=tex.minFilter;t.magFilter=tex.magFilter;t.generateMipmaps=tex.generateMipmaps;t.needsUpdate=true;return t;}
+let MAX_TEX_DIM=Q.maxTexDim;let _idbProbed=false,_idbOk=false;
+async function probeIDB(){if(_idbProbed)return _idbOk;_idbProbed=true;try{const db=await openDB();db.close();_idbOk=true;}catch(e){_idbOk=false;console.warn('[idb] кэш недоступен:',e.message||e);}return _idbOk;}
+async function loadTextureNoCache(url,ctx='tex',timeoutMs=20000,maxDim){console.log(`${ctx}: GET ${url}`);const result=await new Promise((resolve,reject)=>{const id=Math.random().toString(36).slice(2);const handler=(e)=>{if(e.data.id!==id)return;worker.removeEventListener('message',handler);if(e.data.ok)resolve(e.data);else reject(new Error(e.data.error));};worker.addEventListener('message',handler);worker.postMessage({url,id,timeoutMs:timeoutMs||20000,maxDim:maxDim||MAX_TEX_DIM});});const data=new Uint8Array(result.buffer);const tex=new THREE.DataTexture(data,result.width,result.height,THREE.RGBAFormat);return configurePlanetTexture(tex);}
+async function loadTexture(url,ctx='tex',timeoutMs=20000){const cacheKey='tex:'+url;const idbOk=await probeIDB();if(idbOk){try{const cached=await idbGet(cacheKey);if(cached&&cached.width&&cached.height&&cached.buffer){const data=new Uint8Array(cached.buffer);const tex=new THREE.DataTexture(data,cached.width,cached.height,THREE.RGBAFormat);console.log(`${ctx}: из кэша ${cached.width}x${cached.height}`);return configurePlanetTexture(tex);}}catch(e){console.warn(`${ctx}: кэш чтение — ${e.message||e}`);}}const result=await new Promise((resolve,reject)=>{const id=Math.random().toString(36).slice(2);const handler=(e)=>{if(e.data.id!==id)return;worker.removeEventListener('message',handler);if(e.data.ok)resolve(e.data);else reject(new Error(e.data.error));};worker.addEventListener('message',handler);worker.postMessage({url,id,timeoutMs:timeoutMs||20000,maxDim:MAX_TEX_DIM});});if(idbOk){try{await idbPut(cacheKey,{width:result.width,height:result.height,buffer:result.buffer.slice(0)});}catch(e){console.warn(`${ctx}: кэш запись — ${e.message||e}`);}}const data=new Uint8Array(result.buffer);const tex=new THREE.DataTexture(data,result.width,result.height,THREE.RGBAFormat);return configurePlanetTexture(tex);}
+const TH=THREE,PI=Math.PI,$=s=>document.querySelector(s),rnd=Math.random;
 let renderer;
-try {
-  renderer = new TH.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', precision: 'highp' });
-} catch (e) {
-  document.getElementById('load').innerHTML = '<div class="tx" style="text-align:center;padding:20px">WebGL недоступен в этом браузере.<br>Попробуйте другой браузер или устройство.</div>';
-  showError('[webgl-init] ' + (e.message || e));
-  throw e;
-}
-renderer.setPixelRatio(Math.min(devicePixelRatio, Q.dpr));
-renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = TH.PCFSoftShadowMap;
-document.body.prepend(renderer.domElement);
-
-MAX_TEX_DIM = Math.min(Q.maxTexDim, renderer.capabilities.maxTextureSize);
-const MAX_SKY_DIM = Math.min(Q.skySize, renderer.capabilities.maxTextureSize);
-
-(function logGpuInfo() {
-  try {
-    const gl = renderer.getContext();
-    console.log(`[env] protocol=${location.protocol} origin=${location.origin || '(null)'} mobile=${/Mobi|Android/i.test(navigator.userAgent)}`);
-    console.log(`[env] DPR=${devicePixelRatio}, viewport=${innerWidth}x${innerHeight}, effective DPR=${Math.min(devicePixelRatio, Q.dpr)}`);
-    console.log(`[gpu] maxTextureSize=${gl.getParameter(gl.MAX_TEXTURE_SIZE)} effectiveMaxTexDim=${MAX_TEX_DIM} effectiveMaxSkyDim=${MAX_SKY_DIM}`);
-  } catch (e) { console.warn('[gpu] info недоступно: ' + (e.message || e)); }
-})();
-
-renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); showError('[webgl] CONTEXT LOST — ' + (e.statusMessage || 'без причины')); });
-renderer.domElement.addEventListener('webglcontextrestored', () => console.warn('[webgl] context restored'));
-
-const worker = new Worker(workerUrl);
-worker.onerror = (e) => showError('[worker] ' + (e.message || e));
-
-/* Базовая яркость свечения — 300%. */
-const SUN_GLOW_BASE = 3.0;
-/* Постоянное затемнение скайбокса в реализме — 60% от базовой яркости. */
-const SKY_DIM_MUL = 0.6;
-/* Физический радиус Солнца в юнитах сцены (обновляется в apply()). */
-let sunBaseScale = 8;
-/* Скорости симуляции по индексу spI. */
-const SPEEDS = [0, 1, 16, 256];
-/* Видимость линий орбит. */
-let orbitsVisible = true;
-/* Видимость подписей спутников (при фокусе на планете). */
-let moonLabelsVisible = true;
-/* Видимость инфопанели выбранного объекта. */
-let infoPanelVisible = true;
-/* Опорный угол вращения выбранного объекта — камера следует за его верчением. */
-let spinRef = 0;
-/* Целевой кватернион наклона оси текущей цели. */
-let curTiltQ = new TH.Quaternion();
-/* Сглаженный кватернион наклона (подтягивается к curTiltQ). */
-let smoothTiltQ = new TH.Quaternion();
-/* Режим камеры: 0 = мировая (без привязки к спину и наклону), 1 = планетарная. */
-let camMode = 1;
-/* Сглаженное значение режима камеры для плавного перехода. */
-let camMix = 1;
-
-(async () => {
-  const ld = $('#load'), lb = ld.querySelector('i'), lt = ld.querySelector('.tx');
-  const tick = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
-  let _lastProg = 0;
-  const prog = async (p, t) => {
-    const v = Math.max(_lastProg, Math.min(100, Number(p) || 0));
-    _lastProg = v; lb.style.width = v + '%';
-    if (t) lt.textContent = t;
-    await tick();
-  };
-
-  try {
-    console.log('[phase] scene init');
-    const S = new TH.Scene(), C = new TH.PerspectiveCamera(55, innerWidth / innerHeight, .001, 2000000);
-
-    const H = (x, y, z) => { const n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return n - Math.floor(n); };
-    const sm = t => t * t * (3 - 2 * t), L = (u, v, t) => u + (v - u) * t;
-    const HR = 72, HS = 2 * HR + 1, HV = new Float32Array(HS * HS * HS), HFl = new Uint8Array(HS * HS * HS);
-    const hf = (i, j, k) => { let n = Math.imul(i, 374761393) ^ Math.imul(j, 668265263) ^ Math.imul(k, 1274126177); n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967296; };
-    const Hc = (i, j, k) => { if (i < -HR || i > HR || j < -HR || j > HR || k < -HR || k > HR) return hf(i, j, k); const id = ((i + HR) * HS + (j + HR)) * HS + (k + HR); return HFl[id] ? HV[id] : (HFl[id] = 1, HV[id] = H(i, j, k)); };
-    function N(x, y, z) { const i = Math.floor(x), j = Math.floor(y), k = Math.floor(z), a = sm(x - i), b = sm(y - j), c = sm(z - k), h = (p, q, r) => Hc(i + p, j + q, k + r), m = (q, r) => L(h(0, q, r), h(1, q, r), a), n = r => L(m(0, r), m(1, r), b); return L(n(0), n(1), c); }
-    const F = (x, y, z, o = 5) => { let s = 0, a = .5; for (let i = 0; i < o; i++) { s += a * N(x, y, z); x *= 2; y *= 2; z *= 2; a /= 2; } return s * 1.03; };
-
-    const tx = {};
-    const MTEX = {
-      'Ио': 'io', 'Европа': 'europa', 'Ганимед': 'ganymede', 'Каллисто': 'callisto',
-      'Фобос': 'phobos', 'Деймос': 'deimos', 'Титан': 'titan', 'Харон': 'cha',
-      'Рея': 'rhea', 'Диона': 'dione',
-      'Титания': 'titania', 'Оберон': 'oberon', 'Тритон': 'triton',
-      'Никта': 'nix', 'Гидра': 'hydra',
-      'Намака': 'namaka', 'Хииака': 'hiiaka', 'Дисномия': 'dysnomia'
-    };
-    const NL = 'https://raw.githubusercontent.com/VladislavMardashov/WebSolarSystem/main/textures/';
-
-    const TEX_URLS = {
-      sun: [NL + 'sun.jpg'], mer: [NL + 'mercury.jpg'], ven: [NL + 'venus_surface.jpg'],
-      earth: [NL + 'earth_daymap.jpg'], moon: [NL + 'earth_moon.jpg'], mars: [NL + 'mars.jpg'],
-      jup: [NL + 'jupiter.jpg'], sat: [NL + 'saturn.jpg'], ura: [NL + 'uranus.jpg'], nep: [NL + 'neptune.jpg'],
-      io: [NL + 'jupiter_io.jpg'], europa: [NL + 'jupiter_europa.jpg'],
-      ganymede: [NL + 'jupiter_ganymede.jpg'], callisto: [NL + 'jupiter_callisto.jpg'],
-      phobos: [NL + 'mars_phobos.jpg'], deimos: [NL + 'mars_deimos.jpg'],
-      rhea: [NL + 'saturn_rhea.jpg'], dione: [NL + 'dione.jpg'], titan: [NL + 'saturn_titan.jpg'],
-      oberon: [NL + 'uranus_oberon.jpg'], titania: [NL + 'uranus_titania.jpg'],
-      triton: [NL + 'neptune_triton.jpg'], nix: [NL + 'nix.jpg'], hydra: [NL + 'hydra.jpg'],
-      plu: [NL + 'pluto.jpg'], cha: [NL + 'pluto_charon.jpg'],
-      cer: [NL + 'ceres_fictional.jpg'], hau: [NL + 'haumea_fictional.jpg'],
-      mak: [NL + 'makemake_fictional.jpg'], eri: [NL + 'eris_fictional.jpg'],
-      namaka: [NL + 'haumea_namaka.jpg'], hiiaka: [NL + 'haumea_hiiaka.jpg'],
-      dysnomia: [NL + 'eris_dysnomia.jpg'],
-      cl: [NL + 'earth_clouds.jpg'], cit: [NL + 'earth_nightmap.jpg'],
-      ven_atm: [NL + 'venus_atmosphere.jpg']
-    };
-
-    const NORMAL_URLS = {};
-    if (Q.normalAll) {
-      NORMAL_URLS.earth_normal = [NL + 'earth_normal.jpg'];
-      NORMAL_URLS.moon_normal  = [NL + 'moon_normal.jpg'];
-      NORMAL_URLS.mars_normal  = [NL + 'mars_normal.png'];
-    } else if (Q.normalMarsOnly) {
-      NORMAL_URLS.mars_normal  = [NL + 'mars_normal.png'];
-    }
-
-    const texKeys = Object.keys(TEX_URLS);
-    for (let i = 0; i < texKeys.length; i++) {
-      const k = texKeys[i], urls = TEX_URLS[k];
-      await prog(Math.round((i + 1) / texKeys.length * 60), 'Текстуры: ' + k + '…');
-      let loaded = false;
-      for (let u = 0; u < urls.length; u++) {
-        try {
-          const tex = await loadTexture(urls[u], `[tex] ${k}${u > 0 ? ' (alt)' : ''}`, 20000);
-          if (MTEX[k]) tx[MTEX[k]] = tex; else tx[k] = tex;
-          loaded = true; break;
-        } catch (e) { console.warn(`[tex] ${k}: FAIL ${urls[u]} — ${e.message || e}`); }
-      }
-      if (!loaded) console.error(`[tex] ${k}: все URL недоступны`);
-    }
-
-    const normalTextures = {};
-    for (const [k, urls] of Object.entries(NORMAL_URLS)) {
-      for (let u = 0; u < urls.length; u++) {
-        try {
-          const nt = await loadTexture(urls[u], `[norm] ${k}${u > 0 ? ' (alt)' : ''}`, 20000);
-          normalTextures[k] = nt;
-          break;
-        } catch (e) { console.warn(`[norm] ${k}: FAIL ${urls[u]} — ${e.message || e}`); }
-      }
-    }
-
-    /* Дефолты параметров нормал-мап (применяются ко всем, у кого они есть). */
-    const nrmGlobal = { opacity: 0.5, depth: 1.0, gamma: 1.0, swapRG: false, cropX: 5, litFrom: -0.70, litTo: 0.70 };
-    /* Фабрика юниформов — каждому телу с нормал-мапой свой набор (независимая настройка). */
-    const makeNrmU = () => ({
-      uOpacity: { value: nrmGlobal.opacity }, uDepth: { value: nrmGlobal.depth },
-      uGamma: { value: nrmGlobal.gamma }, uSwapRG: { value: nrmGlobal.swapRG ? 1 : 0 },
-      uFrom: { value: nrmGlobal.litFrom }, uTo: { value: nrmGlobal.litTo }
-    });
-
-    if (normalTextures.mars_normal && nrmGlobal.cropX > 0) {
-      normalTextures.mars_normal = cropTextureX(normalTextures.mars_normal, nrmGlobal.cropX);
-    }
-
-    /* Реализм: глобальный множитель яркости света. */
-    const LIGHT_MUL_REAL = 1.6;
-    /* Реализм: базовая интенсивность Солнца. */
-    const LIGHT_BASE_SUN = 0.5;
-    /* Реализм: базовая интенсивность ambient (снижено на 40% от 0.35). */
-    const LIGHT_BASE_AMB = 0.21;
-
-    const G = (a, b) => {
-      const c = document.createElement('canvas'); c.width = c.height = 128;
-      const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
-      g.addColorStop(0, a); g.addColorStop(.3, b); g.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = g; x.fillRect(0, 0, 128, 128);
-      return new TH.CanvasTexture(c);
-    };
-    const spr = (t, s, o) => {
-      const p = new TH.Sprite(new TH.SpriteMaterial({ map: t, blending: TH.AdditiveBlending, depthWrite: false, transparent: true, opacity: o }));
-      p.scale.set(s, s, 1); p.userData.s = s; return p;
-    };
-
-    await prog(65, 'Карта неба…');
-    const sky = new TH.Group(); sky.rotation.x = -.4; S.add(sky);
-    const SKY_SOURCES = [
-      { url: NL + 'milky_way.jpg', src: 'GitHub' },
-      { url: 'https://upload.wikimedia.org/wikipedia/commons/6/60/ESO_-_Milky_Way.jpg', src: 'ESO' }
-    ];
-    let skyTexture = null;
-    for (let i = 0; i < SKY_SOURCES.length; i++) {
-      const entry = SKY_SOURCES[i];
-      try { skyTexture = await loadTextureNoCache(entry.url, `[sky] ${entry.src}`, 25000, MAX_SKY_DIM); break; }
-      catch (e) { console.warn(`[sky] ${entry.src}: FAIL — ${e.message || e}`); }
-    }
-    if (!skyTexture) console.error('[sky] все источники недоступны');
-
-    let skySphere = null;
-    if (skyTexture) {
-      skyTexture.wrapS = TH.RepeatWrapping; skyTexture.wrapT = TH.ClampToEdgeWrapping;
-      skyTexture.flipY = false;
-      skyTexture.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
-      skyTexture.minFilter = TH.LinearMipmapLinearFilter; skyTexture.magFilter = TH.LinearFilter;
-      skyTexture.generateMipmaps = true; skyTexture.encoding = TH.sRGBEncoding;
-      skyTexture.needsUpdate = true;
-      const skyUni = { uTex: { value: skyTexture }, uBright: { value: 1.0 }, uLinear: { value: 0 } };
-      skySphere = new TH.Mesh(new TH.SphereGeometry(3000, 96, 64),
-        new TH.ShaderMaterial({
-          uniforms: skyUni,
-          vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-          fragmentShader: `uniform sampler2D uTex; uniform float uBright; uniform float uLinear; varying vec2 vUv;
-void main(){
-  vec3 c = texture2D(uTex, vUv).rgb;
-  vec3 cG = pow(c, vec3(1.0 / max(uBright, 0.01)));
-  vec3 cL = c * uBright;
-  gl_FragColor = vec4(mix(cG, cL, uLinear), 1.0);
-}`,
-          side: TH.BackSide, depthWrite: false, fog: false
-        }));
-      skySphere.renderOrder = -2; skySphere.userData.uni = skyUni; sky.add(skySphere);
-    } else {
-      sky.add(new TH.Mesh(new TH.SphereGeometry(3000, 32, 16), new TH.MeshBasicMaterial({ color: 0x000000, side: TH.BackSide, depthWrite: false })));
-    }
-
-    const sunM = new TH.Mesh(new TH.SphereGeometry(1, 64, 48), new TH.MeshBasicMaterial({ map: tx.sun, color: new TH.Color(1.55, 1.45, 1.35) }));
-    const glow = spr(G('rgba(255,252,240,1)', 'rgba(255,200,100,.8)'), 1, 1);
-    const gl2 = spr(G('rgba(255,200,120,.55)', 'rgba(255,130,40,.2)'), 1, 1);
-    const gl3 = spr(G('rgba(255,180,80,.35)', 'rgba(255,100,20,.08)'), 1, 1);
-    const gl4 = spr(G('rgba(255,160,60,.2)', 'rgba(255,80,10,.04)'), 1, 1);
-    const gl5 = spr(G('rgba(255,140,40,.12)', 'rgba(255,60,5,.015)'), 1, 1);
-    const glFar = spr(G('rgba(255,200,120,.4)', 'rgba(255,120,40,.06)'), 1, 0);
-    glow.renderOrder = 4; gl2.renderOrder = 3; gl3.renderOrder = 2; gl4.renderOrder = 1; gl5.renderOrder = 0; sunM.renderOrder = 5;
-    glFar.renderOrder = -1;
-    const sunLight = new TH.PointLight(0xfff1de, 3, 0, 1);
-    sunLight.castShadow = true;
-    const SHADOW_MAP_SIZE = Q.shadowSize;
-    sunLight.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
-    sunLight.shadow.bias = -0.0005; sunLight.shadow.radius = 3; sunLight.shadow.normalBias = 0.015;
-    console.log(`[shadow] mapSize=${SHADOW_MAP_SIZE}`);
-    const ambLight = new TH.AmbientLight(0x2a3050, 0.35);
-    S.add(sunM, glow, gl2, gl3, gl4, gl5, glFar, sunLight, ambLight);
-
-    const ATM = { plu: { H: .1, k: 3, b: [.45, 1.1, 3.4], m: .15, i: .5 }, ven: { H: .07, k: 3, b: [1.55, 1.25, .8], m: .8, i: 1.1 }, earth: { H: .05, k: 4, b: [.58, 1.35, 3.31], m: .12, i: 1 }, mars: { H: .04, k: 3.5, b: [1.3, .95, .7], m: .6, i: .5 }, jup: { H: .04, k: 4, b: [1.2, 1, .8], m: .5, i: .45 }, sat: { H: .04, k: 4, b: [1.3, 1.05, .75], m: .5, i: .45 }, ura: { H: .045, k: 4, b: [.9, 1.9, 2.2], m: .1, i: .8 }, nep: { H: .045, k: 4, b: [.5, 1.2, 3.2], m: .1, i: .9 } };
-    const ZA = new TH.Vector3(0, 0, 1);
-    const ATM_STEPS = Q.atmSteps;
-    const makeAtm = (p, q) => {
-      const Qf = 1 - (q || 0), Rp = 1 / Math.cbrt(Qf), gm = new TH.SphereGeometry(Rp + p.H, 48, 32); gm.scale(1, Qf, 1);
-      return new TH.Mesh(gm, new TH.ShaderMaterial({
-        uniforms: { uC: { value: new TH.Vector3(0, 0, 10) }, uS: { value: new TH.Vector3(1, 0, 0) }, uB: { value: new TH.Vector3(...p.b) }, uRp: { value: Rp }, uQ: { value: Qf }, uH: { value: p.H }, uK: { value: p.k }, uM: { value: p.m }, uI: { value: p.i } },
-        vertexShader: 'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-        fragmentShader: `uniform vec3 uC;uniform vec3 uS;uniform vec3 uB;uniform float uRp;uniform float uQ;uniform float uH;uniform float uK;uniform float uM;uniform float uI;varying vec3 vP;
-void main(){vec3 P=vec3(vP.x,vP.y/uQ,vP.z);vec3 C0=vec3(uC.x,uC.y/uQ,uC.z);vec3 S0=normalize(vec3(uS.x,uS.y/uQ,uS.z));
-vec3 d=normalize(P-C0);float b=dot(P,d);float tf=-2.*b;float c=dot(P,P)-uRp*uRp;float disc=b*b-c;float te=tf;
-if(disc>0.&&b<0.)te=min(tf,-b-sqrt(disc));
-float dt=te/${ATM_STEPS}.;float mu=dot(S0,d);float g=.76;
-float ph=mix(.75*(1.+mu*mu),.48*(1.-g*g)/pow(1.+g*g-2.*g*mu,1.5),uM);
-vec3 sc=vec3(0.);float tv=0.;
-for(int i=0;i<${ATM_STEPS};i++){vec3 p=P+d*((float(i)+.5)*dt);float ln=length(p);float rho=exp(-(ln-uRp)/uH*uK);
-float bq=dot(p,S0);float dd=bq*bq-(ln*ln-uRp*uRp);float occ=0.;if(bq<0.)occ=smoothstep(0.,.04,dd);
-float ts=rho*uH*34./(max(bq/ln,0.)+.15);
-sc+=uB*(rho*dt*ph*(1.-occ))*exp(-uB*(ts+tv));tv+=rho*dt*20.*uH;}
-gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
-        transparent: true, blending: TH.AdditiveBlending, depthWrite: false
-      }));
-    };
-
-    const DB = [
-      ['Меркурий', 16, .8, .24, 0, 'mer', 0xb0a498, [], 0, 2439.7, .3871, 0.2056, 7.0, 'Ближайшая к Солнцу планета. Сутки длиннее года.'],
-      ['Венера', 22, 1.5, .62, 177, 'ven', 0xffffff, [], 0, 6051.8, .7233, 0.0068, 3.4, 'Самая горячая планета. Вращается в обратную сторону.'],
-      ['Земля', 29, 1.6, 1, 23, 'earth', 0xffffff, [[3.4, .45, 2, 0xbbbbbb, 1737.4, 384400, 'Луна']], 0, 6371, 1, 0.0167, 0.0, 'Единственная известная планета с жизнью. Один естественный спутник.'],
-      ['Марс', 36, 1.1, 1.88, 25, 'mars', 0xffffff, [[2, .18, 6, 0x8a7f78, 11.1, 9376, 'Фобос'], [3, .15, 2.5, 0x9a9088, 6.2, 23463, 'Деймос']], 0, 3389.5, 1.5237, 0.0934, 1.85, 'Красная планета. Имеет два небольших спутника неправильной формы.'],
-      ['Юпитер', 68, 5, 11.9, 3, 'jup', 0xffffff, [[7.5, .5, 4.4, 0xe8d060, 1821.6, 421700, 'Ио'], [9.5, .45, 2.2, 0xe6dccc, 1560.8, 671034, 'Европа'], [12, .7, 1.1, 0xa09585, 2634.1, 1070412, 'Ганимед'], [15, .65, .5, 0x6e655c, 2410.3, 1882709, 'Каллисто']], 0, 69911, 5.2044, 0.0489, 1.3, 'Крупнейшая планета. Большое Красное Пятно — шторм размером с Землю.'],
-      ['Сатурн', 90, 4.2, 29.5, 27, 'sat', 0xffffff, [[14, .6, .55, 0xd9993f, 2574.7, 1221870, 'Титан'], [11, .3, .9, 0xcfcfcf, 764.3, 527108, 'Рея'], [10.4, .2, 1.6, 0xffffff, 561.4, 377396, 'Диона']], 1, 58232, 9.5826, 0.0565, 2.49, 'Знаменит системой колец. Плотность меньше воды.'],
-      ['Уран', 110, 2.6, 84, 98, 'ura', 0xffffff, [[5, .35, .9, 0xaaa8a5, 788.9, 435910, 'Титания'], [6.3, .33, .6, 0x9a9490, 761.4, 583520, 'Оберон']], 0, 25362, 19.2184, 0.0463, 0.77, 'Ледяной гигант. Ось вращения почти лежит в плоскости орбиты.'],
-      ['Нептун', 128, 2.5, 165, 28, 'nep', 0xffffff, [[5.3, .4, -.9, 0xd8c8c0, 1353.4, 354759, 'Тритон']], 0, 24622, 30.1104, 0.0097, 1.77, 'Самая дальняя планета. Самые сильные ветры в Солнечной системе.'],
-      ['Церера', 51, .45, 4.6, 4, 'cer', 0xffffff, [], 0, 469.7, 2.7675, 0.0758, 10.59, 'Карликовая планета, крупнейший объект главного пояса астероидов.', 1],
-      ['Плутон', 169, .7, 248, 122.5, 'plu', 0xffffff, [[1.9, .36, 8.5, 0xffffff, 606, 19591, 'Харон'], [2.9, .08, 2.2, 0xffffff, 19, 48694, 'Никта'], [3.5, .09, 1.4, 0xffffff, 21, 64738, 'Гидра']], 0, 1188.3, 39.482, 0.2488, 17.16, 'Карликовая планета с азотной атмосферой и светлой «равниной Спутник».', 1],
-      ['Хаумеа', 176, .5, 283.3, null, 'hau', 0xffffff, [[1.7, .08, 3, 0xffffff, 85, 25657, 'Намака'], [2.4, .12, 1.1, 0xffffff, 160, 49880, 'Хииака']], 0, 798, 43.13, 0.195, 28.2, 'Карликовая планета, вытянутая из-за очень быстрого вращения.', 1],
-      ['Макемаке', 182, .55, 309.9, null, 'mak', 0xffffff, [], 0, 715, 45.79, 0.159, 29.0, 'Карликовая планета с красноватой поверхностью.', 1],
-      ['Эрида', 225, .75, 558, null, 'eri', 0xffffff, [[2.2, .18, 3.5, 0xffffff, 350, 37273, 'Дисномия']], 0, 1163, 67.8, 0.44, 44.04, 'Самая массивная из известных карликовых планет.', 1]
-    ];
-
-    const SUN_REAL_KM = 696340, EARTH_KM = 6371, AU_KM = 149597871, KM_PER_UNIT = EARTH_KM / 1.6, AU_TO_UNITS = AU_KM / KM_PER_UNIT;
-    const ov = Math.max(180, Math.min(520, 100 / (Math.tan(.48) * Math.min(innerWidth / innerHeight, 1))));
-    let wasP = false, real = 0;
-    const SIM_LIGHT_MUL = 0.6;
-    const SKY_SUN = 0.15, SKY_REF = 67.8, SIM_SKY_BRIGHT = 0.5;
-
-    const bodies = [
-      { n: 'Обзор', g: new TH.Object3D(), r: 8, d: ov, isRoot: true },
-      { n: 'Солнце', g: sunM, r: 8, isSun: true, info: 'Центральная звезда системы. Масса — 99,8 % всей Солнечной системы.' }
-    ];
-
-    await prog(75, 'Планеты и спутники…');
-    const MINC = { 'Луна': 5.145, 'Фобос': 1.08, 'Деймос': 1.79, 'Ио': .04, 'Европа': .47, 'Ганимед': .2, 'Каллисто': .19, 'Диона': .03, 'Рея': .35, 'Титан': .33, 'Титания': .08, 'Оберон': .07, 'Тритон': 157.3, 'Намака': 113, 'Хииака': 126.4, 'Дисномия': 78.3 };
-
-    const rock = (ax, seed, amp, cr) => () => {
-      const m = Math.cbrt(ax[0] * ax[1] * ax[2]), A = ax.map(v => v / m), C0 = cr.map(([x, y, z, ar, dp]) => { const l = Math.hypot(x, y, z); return [x / l, y / l, z / l, ar, dp]; });
-      const g = new TH.SphereGeometry(1, 96, 64), p = g.attributes.position, nr = g.attributes.normal;
-      const P = (x, y, z) => {
-        const l = Math.hypot(x, y, z); x /= l; y /= l; z /= l;
-        let r = 1 + amp * (F(x * 1.8 + seed, y * 1.8, z * 1.8, 4) - .5) * 2 + .01 * (F(x * 10 + seed, y * 10, z * 10, 3) - .5) * 2;
-        for (const [cx, cy, cz, ar, dp] of C0) { const c = Math.acos(Math.max(-1, Math.min(1, x * cx + y * cy + z * cz))) / ar; if (c < 1) r -= dp * (1 - c * c); if (c < 1.8) r += dp * .12 * Math.exp(-(c - 1) * (c - 1) / .04); }
-        return [x * r * A[0], y * r * A[1], z * r * A[2]];
-      };
-      const v = new TH.Vector3(), t1 = new TH.Vector3(), t2 = new TH.Vector3(), a = new TH.Vector3(), b = new TH.Vector3(), c = new TH.Vector3(), e = .012;
-      for (let i = 0; i < p.count; i++) {
-        v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();
-        t1.set(Math.abs(v.y) < .9 ? 0 : 1, Math.abs(v.y) < .9 ? 1 : 0, 0).cross(v).normalize(); t2.copy(v).cross(t1);
-        const p0 = P(v.x, v.y, v.z), p1 = P(v.x + e * t1.x, v.y + e * t1.y, v.z + e * t1.z), p2 = P(v.x + e * t2.x, v.y + e * t2.y, v.z + e * t2.z);
-        a.set(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]); b.set(p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]); c.crossVectors(a, b).normalize();
-        if (c.x * p0[0] + c.y * p0[1] + c.z * p0[2] < 0) c.negate();
-        p.setXYZ(i, p0[0], p0[1], p0[2]); nr.setXYZ(i, c.x, c.y, c.z);
-      }
-      g.computeBoundingSphere(); return g;
-    };
-
-    const AXS = { hau: [1161 / 798, 513 / 798, 852 / 798] };
-    const SPIN = { ven: -.02, plu: .022, cer: .37, hau: .86, mak: .15, eri: .01 };
-    const ROCK = {
-      'Фобос': rock([13, 9.1, 11.4], 3.1, .035, [[-.66, .02, .75, .46, .2], [.5, -.2, .84, .2, .06], [-.1, .6, -.8, .17, .05], [.8, .3, .5, .14, .04]]),
-      'Никта': rock([24.9, 15.55, 16.6], 5.2, .04, [[.3, .6, .7, .3, .08], [-.7, -.2, .6, .2, .05]]),
-      'Гидра': rock([32.5, 12.5, 22.5], 9.1, .045, [[.5, .3, .8, .25, .07], [-.4, .6, -.7, .2, .05]]),
-      'Деймос': rock([7.5, 5.2, 6.1], 7.7, .02, [[.2, .5, .84, .3, .07], [-.6, -.3, .74, .22, .05], [.7, -.5, -.5, .18, .04], [-.3, .7, -.65, .15, .035]])
-    };
-
-    const earthU = { uSunV: { value: new TH.Vector3(1, 0, 0) } };
-    const SUNU = { uSunDir: { value: new TH.Vector3(1, 0, 0) } }, sunV = new TH.Vector3();
-    const LPS = TH.ShaderChunk.lights_pars_begin.replace('vec3 lVector = pointLight.position - geometry.position;', 'vec3 lVector = uSunDir;');
-    const sunPatch = sh => { sh.uniforms.uSunDir = SUNU.uSunDir; sh.fragmentShader = sh.fragmentShader.replace('#include <lights_pars_begin>', 'uniform vec3 uSunDir;\n' + LPS); };
-
-    function chainPatch(mat, fn) {
-      const prev = mat.onBeforeCompile;
-      const hasPrev = typeof prev === 'function' && prev !== TH.Material.prototype.onBeforeCompile;
-      mat.onBeforeCompile = function (sh) {
-        if (hasPrev) prev.call(this, sh);
-        fn.call(this, sh);
-      };
-      mat.needsUpdate = true;
-    }
-
-    function applyNormalPatches(mat, u) {
-      chainPatch(mat, function (sh) {
-        sh.uniforms.uNormLitFrom = u.uFrom;
-        sh.uniforms.uNormLitTo   = u.uTo;
-        sh.uniforms.uNrmOpacity  = u.uOpacity;
-        sh.uniforms.uNrmGamma    = u.uGamma;
-        sh.uniforms.uNrmDepth    = u.uDepth;
-        sh.uniforms.uNrmSwapRG   = u.uSwapRG;
-
-        sh.fragmentShader =
-          'uniform float uNormLitFrom;\nuniform float uNormLitTo;\n' +
-          'uniform float uNrmOpacity;\nuniform float uNrmGamma;\nuniform float uNrmDepth;\nuniform float uNrmSwapRG;\n' +
-          sh.fragmentShader;
-
-        sh.fragmentShader = sh.fragmentShader.replace(
-          '#include <normal_fragment_begin>',
-          '#include <normal_fragment_begin>\nvec3 _nSaved = normal;'
-        );
-
-        sh.fragmentShader = sh.fragmentShader.replace(
-          'vec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;',
-          [
-            'vec3 mapN = texture2D( normalMap, vUv ).xyz;',
-            'if (uNrmSwapRG > 0.5) { mapN = mapN.grb; }',
-            'mapN.r = pow(max(mapN.r, 0.0), uNrmGamma);',
-            'mapN.g = pow(max(mapN.g, 0.0), uNrmGamma);',
-            'mapN = mapN * 2.0 - 1.0;',
-            'mapN.z *= uNrmDepth;'
-          ].join('\n')
-        );
-
-        sh.fragmentShader = sh.fragmentShader.replace(
-          '#include <normal_fragment_maps>',
-          `#include <normal_fragment_maps>
+try{renderer=new TH.WebGLRenderer({antialias:true,powerPreference:'high-performance',precision:'highp'});}catch(e){document.getElementById('load').innerHTML='<div class="tx" style="text-align:center;padding:20px">WebGL недоступен в этом браузере.<br>Попробуйте другой браузер или устройство.</div>';showError('[webgl-init] '+(e.message||e));throw e;}
+renderer.setPixelRatio(Math.min(devicePixelRatio,Q.dpr));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=TH.PCFSoftShadowMap;document.body.prepend(renderer.domElement);
+MAX_TEX_DIM=Math.min(Q.maxTexDim,renderer.capabilities.maxTextureSize);
+const MAX_SKY_DIM=Math.min(Q.skySize,renderer.capabilities.maxTextureSize);
+(function logGpuInfo(){try{const gl=renderer.getContext();console.log(`[env] protocol=${location.protocol} origin=${location.origin||'(null)'} mobile=${/Mobi|Android/i.test(navigator.userAgent)}`);console.log(`[env] DPR=${devicePixelRatio}, viewport=${innerWidth}x${innerHeight}, effective DPR=${Math.min(devicePixelRatio,Q.dpr)}`);console.log(`[gpu] maxTextureSize=${gl.getParameter(gl.MAX_TEXTURE_SIZE)} effectiveMaxTexDim=${MAX_TEX_DIM} effectiveMaxSkyDim=${MAX_SKY_DIM}`);}catch(e){console.warn('[gpu] info недоступно: '+(e.message||e));}})();
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();showError('[webgl] CONTEXT LOST — '+(e.statusMessage||'без причины'));});
+renderer.domElement.addEventListener('webglcontextrestored',()=>console.warn('[webgl] context restored'));
+const worker=new Worker(workerUrl);worker.onerror=(e)=>showError('[worker] '+(e.message||e));
+const SUN_GLOW_BASE=3.0,SKY_DIM_MUL=0.6;let sunBaseScale=8;
+const SPEEDS=[0,1,16,256];
+let orbitsVisible=true,moonLabelsVisible=true,infoPanelVisible=true,spinRef=0;
+let curTiltQ=new TH.Quaternion(),smoothTiltQ=new TH.Quaternion();
+let camMode=1,camMix=1;
+(async()=>{
+const ld=$('#load'),lb=ld.querySelector('i'),lt=ld.querySelector('.tx');
+const tick=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
+let _lastProg=0;
+const prog=async(p,t)=>{const v=Math.max(_lastProg,Math.min(100,Number(p)||0));_lastProg=v;lb.style.width=v+'%';if(t)lt.textContent=t;await tick();};
+try{
+console.log('[phase] scene init');
+const S=new TH.Scene(),C=new TH.PerspectiveCamera(55,innerWidth/innerHeight,.001,2000000);
+const H=(x,y,z)=>{const n=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453;return n-Math.floor(n);};
+const sm=t=>t*t*(3-2*t),L=(u,v,t)=>u+(v-u)*t;
+const HR=72,HS=2*HR+1,HV=new Float32Array(HS*HS*HS),HFl=new Uint8Array(HS*HS*HS);
+const hf=(i,j,k)=>{let n=Math.imul(i,374761393)^Math.imul(j,668265263)^Math.imul(k,1274126177);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296;};
+const Hc=(i,j,k)=>{if(i<-HR||i>HR||j<-HR||j>HR||k<-HR||k>HR)return hf(i,j,k);const id=((i+HR)*HS+(j+HR))*HS+(k+HR);return HFl[id]?HV[id]:(HFl[id]=1,HV[id]=H(i,j,k));};
+function N(x,y,z){const i=Math.floor(x),j=Math.floor(y),k=Math.floor(z),a=sm(x-i),b=sm(y-j),c=sm(z-k),h=(p,q,r)=>Hc(i+p,j+q,k+r),m=(q,r)=>L(h(0,q,r),h(1,q,r),a),n=r=>L(m(0,r),m(1,r),b);return L(n(0),n(1),c);}
+const F=(x,y,z,o=5)=>{let s=0,a=.5;for(let i=0;i<o;i++){s+=a*N(x,y,z);x*=2;y*=2;z*=2;a/=2;}return s*1.03;};
+const tx={};
+const MTEX={'Ио':'io','Европа':'europa','Ганимед':'ganymede','Каллисто':'callisto','Фобос':'phobos','Деймос':'deimos','Титан':'titan','Харон':'cha','Рея':'rhea','Диона':'dione','Титания':'titania','Оберон':'oberon','Тритон':'triton','Никта':'nix','Гидра':'hydra','Намака':'namaka','Хииака':'hiiaka','Дисномия':'dysnomia'};
+const NL='https://raw.githubusercontent.com/VladislavMardashov/WebSolarSystem/main/textures/';
+const TEX_URLS={sun:[NL+'sun.jpg'],mer:[NL+'mercury.jpg'],ven:[NL+'venus_surface.jpg'],earth:[NL+'earth_daymap.jpg'],moon:[NL+'earth_moon.jpg'],mars:[NL+'mars.jpg'],jup:[NL+'jupiter.jpg'],sat:[NL+'saturn.jpg'],ura:[NL+'uranus.jpg'],nep:[NL+'neptune.jpg'],io:[NL+'jupiter_io.jpg'],europa:[NL+'jupiter_europa.jpg'],ganymede:[NL+'jupiter_ganymede.jpg'],callisto:[NL+'jupiter_callisto.jpg'],phobos:[NL+'mars_phobos.jpg'],deimos:[NL+'mars_deimos.jpg'],rhea:[NL+'saturn_rhea.jpg'],dione:[NL+'dione.jpg'],titan:[NL+'saturn_titan.jpg'],oberon:[NL+'uranus_oberon.jpg'],titania:[NL+'uranus_titania.jpg'],triton:[NL+'neptune_triton.jpg'],nix:[NL+'nix.jpg'],hydra:[NL+'hydra.jpg'],plu:[NL+'pluto.jpg'],cha:[NL+'pluto_charon.jpg'],cer:[NL+'ceres_fictional.jpg'],hau:[NL+'haumea_fictional.jpg'],mak:[NL+'makemake_fictional.jpg'],eri:[NL+'eris_fictional.jpg'],namaka:[NL+'haumea_namaka.jpg'],hiiaka:[NL+'haumea_hiiaka.jpg'],dysnomia:[NL+'eris_dysnomia.jpg'],cl:[NL+'earth_clouds.jpg'],cit:[NL+'earth_nightmap.jpg'],ven_atm:[NL+'venus_atmosphere.jpg']};
+const NORMAL_URLS={};
+if(Q.normalAll){NORMAL_URLS.earth_normal=[NL+'earth_normal.jpg'];NORMAL_URLS.moon_normal=[NL+'moon_normal.jpg'];NORMAL_URLS.mars_normal=[NL+'mars_normal.png'];}else if(Q.normalMarsOnly){NORMAL_URLS.mars_normal=[NL+'mars_normal.png'];}
+const texKeys=Object.keys(TEX_URLS);
+for(let i=0;i<texKeys.length;i++){const k=texKeys[i],urls=TEX_URLS[k];await prog(Math.round((i+1)/texKeys.length*60),'Текстуры: '+k+'…');let loaded=false;for(let u=0;u<urls.length;u++){try{const tex=await loadTexture(urls[u],`[tex] ${k}${u>0?' (alt)':''}`,20000);if(MTEX[k])tx[MTEX[k]]=tex;else tx[k]=tex;loaded=true;break;}catch(e){console.warn(`[tex] ${k}: FAIL ${urls[u]} — ${e.message||e}`);}}if(!loaded)console.error(`[tex] ${k}: все URL недоступны`);}
+const normalTextures={};
+for(const[k,urls]of Object.entries(NORMAL_URLS)){for(let u=0;u<urls.length;u++){try{const nt=await loadTexture(urls[u],`[norm] ${k}${u>0?' (alt)':''}`,20000);normalTextures[k]=nt;break;}catch(e){console.warn(`[norm] ${k}: FAIL ${urls[u]} — ${e.message||e}`);}}}
+const nrmGlobal={opacity:0.5,depth:1.0,gamma:1.0,swapRG:false,cropX:5,litFrom:-0.70,litTo:0.70};
+const makeNrmU=(rot180,opacity)=>({uOpacity:{value:(opacity!=null?opacity:nrmGlobal.opacity)},uDepth:{value:nrmGlobal.depth},uGamma:{value:nrmGlobal.gamma},uSwapRG:{value:nrmGlobal.swapRG?1:0},uFrom:{value:nrmGlobal.litFrom},uTo:{value:nrmGlobal.litTo},uNrmRot180:{value:rot180?1:0}});
+if(normalTextures.mars_normal&&nrmGlobal.cropX>0){normalTextures.mars_normal=cropTextureX(normalTextures.mars_normal,nrmGlobal.cropX);}
+const LIGHT_MUL_REAL=1.6,LIGHT_BASE_SUN=0.5,LIGHT_BASE_AMB=0.21;
+const G=(a,b)=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,a);g.addColorStop(.3,b);g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return new TH.CanvasTexture(c);};
+const spr=(t,s,o)=>{const p=new TH.Sprite(new TH.SpriteMaterial({map:t,blending:TH.AdditiveBlending,depthWrite:false,transparent:true,opacity:o}));p.scale.set(s,s,1);p.userData.s=s;return p;};
+await prog(65,'Карта неба…');
+const sky=new TH.Group();sky.rotation.x=-.4;S.add(sky);
+const SKY_SOURCES=[{url:NL+'milky_way.jpg',src:'GitHub'},{url:'https://upload.wikimedia.org/wikipedia/commons/6/60/ESO_-_Milky_Way.jpg',src:'ESO'}];
+let skyTexture=null;
+for(let i=0;i<SKY_SOURCES.length;i++){const entry=SKY_SOURCES[i];try{skyTexture=await loadTextureNoCache(entry.url,`[sky] ${entry.src}`,25000,MAX_SKY_DIM);break;}catch(e){console.warn(`[sky] ${entry.src}: FAIL — ${e.message||e}`);}}
+if(!skyTexture)console.error('[sky] все источники недоступны');
+let skySphere=null;
+if(skyTexture){skyTexture.wrapS=TH.RepeatWrapping;skyTexture.wrapT=TH.ClampToEdgeWrapping;skyTexture.flipY=false;skyTexture.anisotropy=Math.min(16,renderer.capabilities.getMaxAnisotropy());skyTexture.minFilter=TH.LinearMipmapLinearFilter;skyTexture.magFilter=TH.LinearFilter;skyTexture.generateMipmaps=true;skyTexture.encoding=TH.sRGBEncoding;skyTexture.needsUpdate=true;const skyUni={uTex:{value:skyTexture},uBright:{value:1.0},uLinear:{value:0}};skySphere=new TH.Mesh(new TH.SphereGeometry(3000,96,64),new TH.ShaderMaterial({uniforms:skyUni,vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',fragmentShader:`uniform sampler2D uTex; uniform float uBright; uniform float uLinear; varying vec2 vUv;
+void main(){vec3 c=texture2D(uTex,vUv).rgb;vec3 cG=pow(c,vec3(1.0/max(uBright,0.01)));vec3 cL=c*uBright;gl_FragColor=vec4(mix(cG,cL,uLinear),1.0);}`,side:TH.BackSide,depthWrite:false,fog:false}));skySphere.renderOrder=-2;skySphere.userData.uni=skyUni;sky.add(skySphere);}else{sky.add(new TH.Mesh(new TH.SphereGeometry(3000,32,16),new TH.MeshBasicMaterial({color:0x000000,side:TH.BackSide,depthWrite:false})));}
+const sunM=new TH.Mesh(new TH.SphereGeometry(1,64,48),new TH.MeshBasicMaterial({map:tx.sun,color:new TH.Color(1.55,1.45,1.35)}));
+const glow=spr(G('rgba(255,252,240,1)','rgba(255,200,100,.8)'),1,1);
+const gl2=spr(G('rgba(255,200,120,.55)','rgba(255,130,40,.2)'),1,1);
+const gl3=spr(G('rgba(255,180,80,.35)','rgba(255,100,20,.08)'),1,1);
+const gl4=spr(G('rgba(255,160,60,.2)','rgba(255,80,10,.04)'),1,1);
+const gl5=spr(G('rgba(255,140,40,.12)','rgba(255,60,5,.015)'),1,1);
+const glFar=spr(G('rgba(255,200,120,.4)','rgba(255,120,40,.06)'),1,0);
+glow.renderOrder=4;gl2.renderOrder=3;gl3.renderOrder=2;gl4.renderOrder=1;gl5.renderOrder=0;sunM.renderOrder=5;glFar.renderOrder=-1;
+const sunLight=new TH.PointLight(0xfff1de,3,0,1);sunLight.castShadow=true;
+const SHADOW_MAP_SIZE=Q.shadowSize;
+sunLight.shadow.mapSize.set(SHADOW_MAP_SIZE,SHADOW_MAP_SIZE);
+sunLight.shadow.bias=-0.0005;sunLight.shadow.radius=3;sunLight.shadow.normalBias=0.015;
+console.log(`[shadow] mapSize=${SHADOW_MAP_SIZE}`);
+const ambLight=new TH.AmbientLight(0x2a3050,0.35);
+S.add(sunM,glow,gl2,gl3,gl4,gl5,glFar,sunLight,ambLight);
+const ATM={plu:{H:.1,k:3,b:[.45,1.1,3.4],m:.15,i:.5},ven:{H:.07,k:3,b:[1.55,1.25,.8],m:.8,i:1.1},earth:{H:.05,k:4,b:[.58,1.35,3.31],m:.12,i:1},mars:{H:.04,k:3.5,b:[1.3,.95,.7],m:.6,i:.5},jup:{H:.04,k:4,b:[1.2,1,.8],m:.5,i:.45},sat:{H:.04,k:4,b:[1.3,1.05,.75],m:.5,i:.45},ura:{H:.045,k:4,b:[.9,1.9,2.2],m:.1,i:.8},nep:{H:.045,k:4,b:[.5,1.2,3.2],m:.1,i:.9}};
+const ZA=new TH.Vector3(0,0,1);
+const ATM_STEPS=Q.atmSteps;
+const makeAtm=(p,q)=>{const Qf=1-(q||0),Rp=1/Math.cbrt(Qf),gm=new TH.SphereGeometry(Rp+p.H,48,32);gm.scale(1,Qf,1);return new TH.Mesh(gm,new TH.ShaderMaterial({uniforms:{uC:{value:new TH.Vector3(0,0,10)},uS:{value:new TH.Vector3(1,0,0)},uB:{value:new TH.Vector3(...p.b)},uRp:{value:Rp},uQ:{value:Qf},uH:{value:p.H},uK:{value:p.k},uM:{value:p.m},uI:{value:p.i}},vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`uniform vec3 uC;uniform vec3 uS;uniform vec3 uB;uniform float uRp;uniform float uQ;uniform float uH;uniform float uK;uniform float uM;uniform float uI;varying vec3 vP;
+void main(){vec3 P=vec3(vP.x,vP.y/uQ,vP.z);vec3 C0=vec3(uC.x,uC.y/uQ,uC.z);vec3 S0=normalize(vec3(uS.x,uS.y/uQ,uS.z));vec3 d=normalize(P-C0);float b=dot(P,d);float tf=-2.*b;float c=dot(P,P)-uRp*uRp;float disc=b*b-c;float te=tf;if(disc>0.&&b<0.)te=min(tf,-b-sqrt(disc));float dt=te/${ATM_STEPS}.;float mu=dot(S0,d);float g=.76;float ph=mix(.75*(1.+mu*mu),.48*(1.-g*g)/pow(1.+g*g-2.*g*mu,1.5),uM);vec3 sc=vec3(0.);float tv=0.;for(int i=0;i<${ATM_STEPS};i++){vec3 p=P+d*((float(i)+.5)*dt);float ln=length(p);float rho=exp(-(ln-uRp)/uH*uK);float bq=dot(p,S0);float dd=bq*bq-(ln*ln-uRp*uRp);float occ=0.;if(bq<0.)occ=smoothstep(0.,.04,dd);float ts=rho*uH*34./(max(bq/ln,0.)+.15);sc+=uB*(rho*dt*ph*(1.-occ))*exp(-uB*(ts+tv));tv+=rho*dt*20.*uH;}gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,transparent:true,blending:TH.AdditiveBlending,depthWrite:false}));};
+const DB=[['Меркурий',16,.8,.24,0,'mer',0xb0a498,[],0,2439.7,.3871,0.2056,7.0,'Ближайшая к Солнцу планета. Сутки длиннее года.'],['Венера',22,1.5,.62,177,'ven',0xffffff,[],0,6051.8,.7233,0.0068,3.4,'Самая горячая планета. Вращается в обратную сторону.'],['Земля',29,1.6,1,23,'earth',0xffffff,[[3.4,.45,2,0xbbbbbb,1737.4,384400,'Луна']],0,6371,1,0.0167,0.0,'Единственная известная планета с жизнью. Один естественный спутник.'],['Марс',36,1.1,1.88,25,'mars',0xffffff,[[2,.18,6,0x8a7f78,11.1,9376,'Фобос'],[3,.15,2.5,0x9a9088,6.2,23463,'Деймос']],0,3389.5,1.5237,0.0934,1.85,'Красная планета. Имеет два небольших спутника неправильной формы.'],['Юпитер',68,5,11.9,3,'jup',0xffffff,[[7.5,.5,4.4,0xe8d060,1821.6,421700,'Ио'],[9.5,.45,2.2,0xe6dccc,1560.8,671034,'Европа'],[12,.7,1.1,0xa09585,2634.1,1070412,'Ганимед'],[15,.65,.5,0x6e655c,2410.3,1882709,'Каллисто']],0,69911,5.2044,0.0489,1.3,'Крупнейшая планета. Большое Красное Пятно — шторм размером с Землю.'],['Сатурн',90,4.2,29.5,27,'sat',0xffffff,[[14,.6,.55,0xd9993f,2574.7,1221870,'Титан'],[11,.3,.9,0xcfcfcf,764.3,527108,'Рея'],[10.4,.2,1.6,0xffffff,561.4,377396,'Диона']],1,58232,9.5826,0.0565,2.49,'Знаменит системой колец. Плотность меньше воды.'],['Уран',110,2.6,84,98,'ura',0xffffff,[[5,.35,.9,0xaaa8a5,788.9,435910,'Титания'],[6.3,.33,.6,0x9a9490,761.4,583520,'Оберон']],0,25362,19.2184,0.0463,0.77,'Ледяной гигант. Ось вращения почти лежит в плоскости орбиты.'],['Нептун',128,2.5,165,28,'nep',0xffffff,[[5.3,.4,-.9,0xd8c8c0,1353.4,354759,'Тритон']],0,24622,30.1104,0.0097,1.77,'Самая дальняя планета. Самые сильные ветры в Солнечной системе.'],['Церера',51,.45,4.6,4,'cer',0xffffff,[],0,469.7,2.7675,0.0758,10.59,'Карликовая планета, крупнейший объект главного пояса астероидов.',1],['Плутон',169,.7,248,122.5,'plu',0xffffff,[[1.9,.36,8.5,0xffffff,606,19591,'Харон'],[2.9,.08,2.2,0xffffff,19,48694,'Никта'],[3.5,.09,1.4,0xffffff,21,64738,'Гидра']],0,1188.3,39.482,0.2488,17.16,'Карликовая планета с азотной атмосферой и светлой «равниной Спутник».',1],['Хаумеа',176,.5,283.3,null,'hau',0xffffff,[[1.7,.08,3,0xffffff,85,25657,'Намака'],[2.4,.12,1.1,0xffffff,160,49880,'Хииака']],0,798,43.13,0.195,28.2,'Карликовая планета, вытянутая из-за очень быстрого вращения.',1],['Макемаке',182,.55,309.9,null,'mak',0xffffff,[],0,715,45.79,0.159,29.0,'Карликовая планета с красноватой поверхностью.',1],['Эрида',225,.75,558,null,'eri',0xffffff,[[2.2,.18,3.5,0xffffff,350,37273,'Дисномия']],0,1163,67.8,0.44,44.04,'Самая массивная из известных карликовых планет.',1]];
+const SUN_REAL_KM=696340,EARTH_KM=6371,AU_KM=149597871,KM_PER_UNIT=EARTH_KM/1.6,AU_TO_UNITS=AU_KM/KM_PER_UNIT;
+const ov=Math.max(180,Math.min(520,100/(Math.tan(.48)*Math.min(innerWidth/innerHeight,1))));
+let wasP=false,real=0;
+const SIM_LIGHT_MUL=0.6;
+const SKY_SUN=0.15,SKY_REF=67.8,SIM_SKY_BRIGHT=0.5;
+const bodies=[{n:'Обзор',g:new TH.Object3D(),r:8,d:ov,isRoot:true},{n:'Солнце',g:sunM,r:8,isSun:true,info:'Центральная звезда системы. Масса — 99,8 % всей Солнечной системы.'}];
+await prog(75,'Планеты и спутники…');
+const MINC={'Луна':5.145,'Фобос':1.08,'Деймос':1.79,'Ио':.04,'Европа':.47,'Ганимед':.2,'Каллисто':.19,'Диона':.03,'Рея':.35,'Титан':.33,'Титания':.08,'Оберон':.07,'Тритон':157.3,'Намака':113,'Хииака':126.4,'Дисномия':78.3};
+const rock=(ax,seed,amp,cr)=>()=>{const m=Math.cbrt(ax[0]*ax[1]*ax[2]),A=ax.map(v=>v/m),C0=cr.map(([x,y,z,ar,dp])=>{const l=Math.hypot(x,y,z);return[x/l,y/l,z/l,ar,dp];});const g=new TH.SphereGeometry(1,96,64),p=g.attributes.position,nr=g.attributes.normal;const P=(x,y,z)=>{const l=Math.hypot(x,y,z);x/=l;y/=l;z/=l;let r=1+amp*(F(x*1.8+seed,y*1.8,z*1.8,4)-.5)*2+.01*(F(x*10+seed,y*10,z*10,3)-.5)*2;for(const[cx,cy,cz,ar,dp]of C0){const c=Math.acos(Math.max(-1,Math.min(1,x*cx+y*cy+z*cz)))/ar;if(c<1)r-=dp*(1-c*c);if(c<1.8)r+=dp*.12*Math.exp(-(c-1)*(c-1)/.04);}return[x*r*A[0],y*r*A[1],z*r*A[2]];};const v=new TH.Vector3(),t1=new TH.Vector3(),t2=new TH.Vector3(),a=new TH.Vector3(),b=new TH.Vector3(),c=new TH.Vector3(),e=.012;for(let i=0;i<p.count;i++){v.set(p.getX(i),p.getY(i),p.getZ(i)).normalize();t1.set(Math.abs(v.y)<.9?0:1,Math.abs(v.y)<.9?1:0,0).cross(v).normalize();t2.copy(v).cross(t1);const p0=P(v.x,v.y,v.z),p1=P(v.x+e*t1.x,v.y+e*t1.y,v.z+e*t1.z),p2=P(v.x+e*t2.x,v.y+e*t2.y,v.z+e*t2.z);a.set(p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]);b.set(p2[0]-p0[0],p2[1]-p0[1],p2[2]-p0[2]);c.crossVectors(a,b).normalize();if(c.x*p0[0]+c.y*p0[1]+c.z*p0[2]<0)c.negate();p.setXYZ(i,p0[0],p0[1],p0[2]);nr.setXYZ(i,c.x,c.y,c.z);}g.computeBoundingSphere();return g;};
+const AXS={hau:[1161/798,513/798,852/798]};
+const SPIN={ven:-.02,plu:.022,cer:.37,hau:.86,mak:.15,eri:.01};
+const ROCK={'Фобос':rock([13,9.1,11.4],3.1,.035,[[-.66,.02,.75,.46,.2],[.5,-.2,.84,.2,.06],[-.1,.6,-.8,.17,.05],[.8,.3,.5,.14,.04]]),'Никта':rock([24.9,15.55,16.6],5.2,.04,[[.3,.6,.7,.3,.08],[-.7,-.2,.6,.2,.05]]),'Гидра':rock([32.5,12.5,22.5],9.1,.045,[[.5,.3,.8,.25,.07],[-.4,.6,-.7,.2,.05]]),'Деймос':rock([7.5,5.2,6.1],7.7,.02,[[.2,.5,.84,.3,.07],[-.6,-.3,.74,.22,.05],[.7,-.5,-.5,.18,.04],[-.3,.7,-.65,.15,.035]])};
+const earthU={uSunV:{value:new TH.Vector3(1,0,0)}};
+const SUNU={uSunDir:{value:new TH.Vector3(1,0,0)}},sunV=new TH.Vector3();
+const LPS=TH.ShaderChunk.lights_pars_begin.replace('vec3 lVector = pointLight.position - geometry.position;','vec3 lVector = uSunDir;');
+const sunPatch=sh=>{sh.uniforms.uSunDir=SUNU.uSunDir;sh.fragmentShader=sh.fragmentShader.replace('#include <lights_pars_begin>','uniform vec3 uSunDir;\n'+LPS);};
+function chainPatch(mat,fn){const prev=mat.onBeforeCompile;const hasPrev=typeof prev==='function'&&prev!==TH.Material.prototype.onBeforeCompile;mat.onBeforeCompile=function(sh){if(hasPrev)prev.call(this,sh);fn.call(this,sh);};mat.needsUpdate=true;}
+function applyNormalPatches(mat,u){chainPatch(mat,function(sh){sh.uniforms.uNormLitFrom=u.uFrom;sh.uniforms.uNormLitTo=u.uTo;sh.uniforms.uNrmOpacity=u.uOpacity;sh.uniforms.uNrmGamma=u.uGamma;sh.uniforms.uNrmDepth=u.uDepth;sh.uniforms.uNrmSwapRG=u.uSwapRG;sh.uniforms.uNrmRot180=u.uNrmRot180;sh.fragmentShader='uniform float uNormLitFrom;\nuniform float uNormLitTo;\nuniform float uNrmOpacity;\nuniform float uNrmGamma;\nuniform float uNrmDepth;\nuniform float uNrmSwapRG;\nuniform float uNrmRot180;\n'+sh.fragmentShader;sh.fragmentShader=sh.fragmentShader.replace('#include <normal_fragment_begin>','#include <normal_fragment_begin>\nvec3 _nSaved = normal;');sh.fragmentShader=sh.fragmentShader.replace('vec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;',['vec2 _nrmUv = vUv;','if (uNrmRot180 > 0.5) _nrmUv = vec2(fract(vUv.x + 0.5), vUv.y);','vec3 mapN = texture2D( normalMap, _nrmUv ).xyz;','if (uNrmSwapRG > 0.5) { mapN = mapN.grb; }','mapN.r = pow(max(mapN.r, 0.0), uNrmGamma);','mapN.g = pow(max(mapN.g, 0.0), uNrmGamma);','mapN = mapN * 2.0 - 1.0;','mapN.z *= uNrmDepth;'].join('\n'));sh.fragmentShader=sh.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
 { float _litF = smoothstep(uNormLitFrom, uNormLitTo, dot(_nSaved, normalize(uSunDir))) * uNrmOpacity;
-  normal = normalize(mix(_nSaved, normal, _litF)); }`
-        );
-      });
-    }
-
-    function patchSunLighting() {
-      const seen = new Set(), M0 = TH.Material.prototype.onBeforeCompile; let idCounter = 0;
-      const wrap = mat => {
-        if (seen.has(mat)) return; seen.add(mat);
-        const prev = mat.onBeforeCompile, custom = prev !== M0, key = 'sun|' + (custom ? prev.toString() : '') + '|' + (idCounter++);
-        mat.onBeforeCompile = function (sh) { if (custom) prev.call(this, sh); sunPatch(sh); };
-        mat.customProgramCacheKey = () => key; mat.needsUpdate = true;
-      };
-      const obj = mesh => {
-        if (!mesh) return; wrap(mesh.material);
-        mesh.onBeforeRender = function (r, sc, cam) {
-          const e = this.matrixWorld.elements; sunV.set(-e[12], -e[13], -e[14]);
-          const Lv = sunV.length(); sunV.transformDirection(cam.matrixWorldInverse);
-          SUNU.uSunDir.value.copy(sunV).multiplyScalar(real ? 1 : Lv);
-        };
-      };
-      for (const b of bodies) { if (!b.m) continue; obj(b.m); obj(b.cloudsMesh); obj(b.vatm); obj(b.ringMesh); for (const p of b.mo) obj(p.children[0]); }
-    }
-
-    const PLs = `{vec3 Lr=normalize(uSun-vRel);float dn=dot(Lr,uN);float sh=1.;if(abs(dn)>.0001){float tt=-dot(vRel,uN)/dn;if(tt>0.){vec3 Hh=vRel+Lr*tt;float uu=(length(Hh)/uS-1.3)/1.1;if(uu>0.&&uu<1.)sh=1.-.9*texture2D(uRT,vec2(uu,.5)).a;}}reflectedLight.directDiffuse*=sh;reflectedLight.directSpecular*=sh;}`;
-    const RGs = `{vec3 Lr=normalize(uSun-vRel);vec3 Rn=uN*dot(vRel,uN);vec3 Rp=vRel-Rn;vec3 Ln=uN*dot(Lr,uN);vec3 Lp=Lr-Ln;vec3 R2=Rp/uA+Rn/uCc;vec3 L2=Lp/uA+Ln/uCc;float A2=dot(L2,L2);float B2=dot(R2,L2);float D2=B2*B2-A2*(dot(R2,R2)-1.);float sh=1.;if(D2>0.&&B2<0.)sh=1.-.92*smoothstep(0.,.05,D2/A2);reflectedLight.directDiffuse*=sh;reflectedLight.directSpecular*=sh;}`;
-    const RPs = 'uniform vec3 uSun;uniform vec3 uN;uniform float uS;uniform float uA;uniform float uCc;uniform sampler2D uRT;varying vec3 vRel;\n';
-    const patchV = sh => { sh.vertexShader = 'varying vec3 vRel;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvRel=mat3(modelMatrix)*transformed;'); };
-
-    DB.forEach(([n, a0, r0, Tp, tilt, k, tint, ms, ring, kmR, au, ecc, orbInc, info, dw]) => {
-      const g = new TH.Group(), tg = new TH.Group();
-      const matOpts = { map: tx[k], color: tint, roughness: 0.92, metalness: 0, emissive: 0x0a0a0a, emissiveIntensity: 0.08 };
-      const realNormalKey = k === 'earth' ? 'earth_normal' : k === 'mars' ? 'mars_normal' : null;
-      let hasNormal = false;
-      let myNrmU = null;
-      if (realNormalKey && normalTextures[realNormalKey]) {
-        matOpts.normalMap = normalTextures[realNormalKey];
-        matOpts.normalScale = k === 'mars' ? new TH.Vector2(-1, 1) : new TH.Vector2(1, 1);
-        myNrmU = makeNrmU();
-        hasNormal = true;
-      }
-      const m = new TH.Mesh(new TH.SphereGeometry(1, 48, 32), new TH.MeshStandardMaterial(matOpts));
-      m.castShadow = true; m.receiveShadow = true;
-      let cloudsMesh = null, vatm = null;
-      tg.rotation.z = tilt * PI / 180; tg.add(m); g.add(tg);
-
-      if (k === 'earth') {
-        m.material.color.setRGB(1.0, 1.0, 0.98);
-        if (tx.cl) {
-          cloudsMesh = new TH.Mesh(new TH.SphereGeometry(1, 48, 32), new TH.MeshStandardMaterial({
-            color: 0xffffff,
-            alphaMap: tx.cl,
-            transparent: true,
-            depthWrite: false,
-            roughness: 1,
-            metalness: 0,
-            opacity: 0.95,
-            side: TH.FrontSide
-          }));
-          cloudsMesh.renderOrder = 1; tg.add(cloudsMesh);
-        }
-        const em = m.material;
-        if (tx.cit) {
-          em.emissiveMap = tx.cit;
-          em.emissive.set(0xffcc88);
-          em.emissiveIntensity = 0.95;
-          chainPatch(em, sh => {
-            sh.uniforms.uSunV = earthU.uSunV;
-            sh.fragmentShader = 'uniform vec3 uSunV;\n' + sh.fragmentShader.replace(
-              '#include <emissivemap_fragment>',
-              '#include <emissivemap_fragment>\ntotalEmissiveRadiance*=1.-smoothstep(-.04,.10,dot(normalize(normal),uSunV));'
-            );
-          });
-        }
-      }
-      if (k === 'ven' && tx.ven_atm) {
-        vatm = new TH.Mesh(new TH.SphereGeometry(1, 48, 32), new TH.MeshStandardMaterial({
-          map: tx.ven_atm, transparent: true, depthWrite: false, roughness: 1, metalness: 0, opacity: 0.92, side: TH.FrontSide
-        }));
-        vatm.renderOrder = 1; tg.add(vatm);
-      }
-
-      if (hasNormal) applyNormalPatches(m.material, myNrmU);
-
-      let atm = null;
-      { const ap = ATM[k]; if (ap) { atm = makeAtm(ap, ({ jup: .06487, sat: .09796 })[k]); atm.renderOrder = 3; atm.userData.I0 = ap.i; atm.rotation.z = tilt * PI / 180; g.add(atm); } }
-      let ringMesh = null, ringTex = null, rU = null;
-      if (ring) {
-        const rg = new TH.RingGeometry(1.3, 2.4, 128), p = rg.attributes.position, u = rg.attributes.uv, v = new TH.Vector3();
-        for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); u.setXY(i, (v.length() - 1.3) / 1.1, 0); }
-        const rc = document.createElement('canvas'); rc.width = 256; rc.height = 1; const x = rc.getContext('2d');
-        for (let i = 0; i < 256; i++) {
-          const t = i / 256, al = t < .06 || t > .97 ? 0 : t > .5 && t < .57 ? .05 : .3 + .6 * Math.abs(Math.sin(i * .8) * Math.sin(i * .19 + 1));
-          x.fillStyle = `rgba(${215 - t * 40 | 0},${190 - t * 40 | 0},${150 - t * 30 | 0},${al})`; x.fillRect(i, 0, 1, 1);
-        }
-        ringTex = new TH.CanvasTexture(rc);
-        ringMesh = new TH.Mesh(rg, new TH.MeshStandardMaterial({ map: ringTex, emissive: 0x2a241a, roughness: 1, metalness: 0, transparent: true, side: TH.DoubleSide, depthWrite: false }));
-        ringMesh.rotation.x = PI / 2; tg.add(ringMesh);
-        rU = { uSun: { value: new TH.Vector3() }, uN: { value: new TH.Vector3(0, 1, 0).applyAxisAngle(new TH.Vector3(0, 0, 1), tilt * PI / 180) }, uS: { value: 1 }, uA: { value: 1 }, uCc: { value: 1 }, uRT: { value: ringTex } };
-        m.material.onBeforeCompile = sh => { Object.assign(sh.uniforms, rU); patchV(sh); sh.fragmentShader = RPs + sh.fragmentShader.replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' + PLs); };
-        ringMesh.material.onBeforeCompile = sh => { Object.assign(sh.uniforms, rU); patchV(sh); sh.fragmentShader = RPs + sh.fragmentShader.replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n' + RGs); };
-      }
-      const mo = ms.map(([d, mr, sp, col, mkm, mdist, mname]) => {
-        const pv = new TH.Group();
-        const moonNrmKey = mname === 'Луна' ? 'moon_normal' : null;
-        const mmOpts = { map: tx[MTEX[mname] || 'moon'], color: col, roughness: 0.95, metalness: 0, emissive: 0x050505, emissiveIntensity: 0.05 };
-        let moonNrmU = null;
-        if (moonNrmKey && normalTextures[moonNrmKey]) {
-          mmOpts.normalMap = normalTextures[moonNrmKey];
-          mmOpts.normalScale = new TH.Vector2(1, 1);
-          moonNrmU = makeNrmU();
-        }
-        const mm = new TH.Mesh(ROCK[mname] ? ROCK[mname]() : new TH.SphereGeometry(1, 24, 16), new TH.MeshStandardMaterial(mmOpts));
-        if (moonNrmU) applyNormalPatches(mm.material, moonNrmU);
-        mm.castShadow = true; mm.receiveShadow = true;
-        if (mname === 'Луна') mm.rotation.y = PI;
-        pv.rotation.order = 'ZXY';
-        pv.rotation.z = (k === 'earth' ? 0 : tilt) * PI / 180;
-        pv.rotation.x = (MINC[mname] || 0) * PI / 180;
-        mm.position.x = d; mm.scale.setScalar(mr); pv.add(mm);
-        const mPts = []; for (let i = 0; i <= 128; i++) { const t = i / 128 * 2 * PI; mPts.push(new TH.Vector3(Math.cos(t) * d, 0, Math.sin(t) * d)); }
-        const mLn = new TH.Line(new TH.BufferGeometry().setFromPoints(mPts), new TH.LineBasicMaterial({ color: 0x8899bb, transparent: true, opacity: 0.14, depthWrite: false }));
-        mLn.visible = false; mLn.renderOrder = -2; pv.add(mLn);
-        pv.userData = { sp: mname === 'Тритон' ? Math.abs(sp) : sp, ph: rnd() * 6.28, d, mr, mkm: mkm || 1737, mdist: mdist || 384400, name: mname || 'Спутник', orbit: mLn, nrmU: moonNrmU };
-        g.add(pv); return pv;
-      });
-      const pts = []; for (let i = 0; i <= 512; i++) { const t = i / 512 * 2 * PI; pts.push(new TH.Vector3(Math.cos(t), 0, Math.sin(t))); }
-      const ln = new TH.Line(new TH.BufferGeometry().setFromPoints(pts), new TH.LineBasicMaterial({ color: 0x7a8aab, transparent: true, opacity: .32, depthWrite: false }));
-      const incRad = (orbInc || 0) * PI / 180; if (dw) ln.material.color.set(0xa88f6e);
-      ln.rotation.x = incRad;
-      S.add(g, ln);
-      bodies.push({ n, g, ln, r: r0, r0, a: a0, a0, kmR, au, ecc: ecc || 0, orbInc: orbInc || 0, incRad, T: Tp, k, m, mo, ph: rnd() * 6.28, moonData: ms, ringMesh, atm, tg, baseA0: a0, baseR0: r0, info, tilt, dw, axes: AXS[k], cloudsMesh, vatm, flat: ({ jup: .06487, sat: .09796 })[k] || 0, ringU: rU, hasNormal, nrmU: myNrmU });
-    });
-
-    const satB = bodies.find(b => b.k === 'sat'), earthB = bodies.find(b => b.k === 'earth'), venB = bodies.find(b => b.k === 'ven');
-    patchSunLighting();
-
-    const VEN_MAX_REAL = 0.92;
-    const venCtl = document.createElement('div');
-    venCtl.id = 'venAtmCtl';
-    venCtl.innerHTML = '<label>Атмосфера</label><input type="range" id="venAtmSlider" min="0" max="100" step="1" value="100"><span class="v" id="venAtmVal">100%</span>';
-    document.body.append(venCtl);
-    const venSlider = document.getElementById('venAtmSlider');
-    const venVal = document.getElementById('venAtmVal');
-    venSlider.addEventListener('input', () => {
-      const p = parseInt(venSlider.value, 10);
-      venVal.textContent = p + '%';
-      if (venB && venB.vatm) venB.vatm.material.opacity = (p / 100) * VEN_MAX_REAL;
-    });
-    ['pointerdown', 'click', 'touchstart'].forEach(ev => venSlider.addEventListener(ev, e => e.stopPropagation(), ev === 'touchstart' ? { passive: true } : false));
-
-    /* ============ Панель управления нормал-мапой Луны ============ */
-    const nrmCtl = document.createElement('div');
-    nrmCtl.id = 'nrmCtl';
-    nrmCtl.innerHTML =
-      '<div class="title">Нормал-мапа · Луна</div>' +
-      '<div class="row"><label>Рельеф</label><input type="range" id="nrmOpacity" min="0" max="100" step="5" value="50"><span class="v" id="nrmOpacityVal">0.50</span></div>' +
-      '<div class="row"><label>Глубина</label><input type="range" id="nrmDepth" min="0" max="300" step="10" value="100"><span class="v" id="nrmDepthVal">1.0</span></div>' +
-      '<div class="row"><label>Гамма</label><input type="range" id="nrmGamma" min="50" max="200" step="10" value="100"><span class="v" id="nrmGammaVal">1.0</span></div>' +
-      '<button class="reset" id="nrmReset">Сброс</button>';
-    document.body.append(nrmCtl);
-
-    const nrmOpacityEl = document.getElementById('nrmOpacity');
-    const nrmOpacityVal = document.getElementById('nrmOpacityVal');
-    const nrmDepthEl = document.getElementById('nrmDepth');
-    const nrmDepthVal = document.getElementById('nrmDepthVal');
-    const nrmGammaEl = document.getElementById('nrmGamma');
-    const nrmGammaVal = document.getElementById('nrmGammaVal');
-    let nrmTarget = null;
-
-    function syncNrmUI() {
-      if (!nrmTarget) return;
-      nrmOpacityEl.value = Math.round(nrmTarget.uOpacity.value * 100);
-      nrmOpacityVal.textContent = nrmTarget.uOpacity.value.toFixed(2);
-      nrmDepthEl.value = Math.round(nrmTarget.uDepth.value * 100);
-      nrmDepthVal.textContent = nrmTarget.uDepth.value.toFixed(1);
-      nrmGammaEl.value = Math.round(nrmTarget.uGamma.value * 100);
-      nrmGammaVal.textContent = nrmTarget.uGamma.value.toFixed(1);
-    }
-
-    nrmOpacityEl.addEventListener('input', () => {
-      const v = parseInt(nrmOpacityEl.value, 10) / 100;
-      nrmOpacityVal.textContent = v.toFixed(2);
-      if (nrmTarget) nrmTarget.uOpacity.value = v;
-    });
-    nrmDepthEl.addEventListener('input', () => {
-      const v = parseInt(nrmDepthEl.value, 10) / 100;
-      nrmDepthVal.textContent = v.toFixed(1);
-      if (nrmTarget) nrmTarget.uDepth.value = v;
-    });
-    nrmGammaEl.addEventListener('input', () => {
-      const v = parseInt(nrmGammaEl.value, 10) / 100;
-      nrmGammaVal.textContent = v.toFixed(1);
-      if (nrmTarget) nrmTarget.uGamma.value = v;
-    });
-    document.getElementById('nrmReset').addEventListener('click', () => {
-      if (!nrmTarget) return;
-      nrmTarget.uOpacity.value = nrmGlobal.opacity;
-      nrmTarget.uDepth.value = nrmGlobal.depth;
-      nrmTarget.uGamma.value = nrmGlobal.gamma;
-      syncNrmUI();
-    });
-    ['pointerdown', 'click', 'touchstart'].forEach(ev => nrmCtl.addEventListener(ev, e => e.stopPropagation(), ev === 'touchstart' ? { passive: true } : false));
-
-    await prog(85, 'Пояса астероидов…');
-    const BC = [
-      { c: 2.3,  s: .14, n: Math.max(30, Math.floor(760 * Q.asteroidMul)) },
-      { c: 2.65, s: .12, n: Math.max(30, Math.floor(900 * Q.asteroidMul)) },
-      { c: 3,    s: .14, n: Math.max(30, Math.floor(840 * Q.asteroidMul)) }
-    ];
-    const BGm = new TH.DodecahedronGeometry(1, 0), BMt = new TH.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), o = new TH.Object3D(), bcol = new TH.Color(), G3 = () => (rnd() + rnd() + rnd() - 1.5) * 2;
-    const belts = [], bms = [], bps = [], bmArr = [];
-    BC.forEach((cc, k) => {
-      const m = new TH.InstancedMesh(BGm, BMt.clone(), cc.n); m.frustumCulled = false; m.userData.w = .0157 / Math.pow(cc.c, 1.5); belts.push(m);
-      bps.push(Array.from({ length: cc.n }, () => [rnd() * 2 * PI, Math.min(3.32, Math.max(2.08, cc.c + cc.s * G3())), rnd() - .5, .05 + rnd() ** 3 * .35, .6 + rnd() * .6, .7 + rnd() * .5, rnd() * 6, rnd() * 6]));
-      const arr = new Float32Array(cc.n * 3), g = new TH.BufferGeometry(); g.setAttribute('position', new TH.BufferAttribute(arr, 3)); bmArr.push(arr);
-      const bm = new TH.Points(g, new TH.PointsMaterial({ color: 0x56524b, size: 1.25, sizeAttenuation: false, transparent: true, opacity: .36 })); bm.visible = false; bm.frustumCulled = false; bms.push(bm);
-    });
-    const KC = [
-      { c: 34, s: 3.4, n: Math.max(60, Math.floor(1100 * Q.kuiperMul)) },
-      { c: 41, s: 3,   n: Math.max(60, Math.floor(1100 * Q.kuiperMul)) },
-      { c: 47, s: 3,   n: Math.max(40, Math.floor(800  * Q.kuiperMul)) }
-    ];
-    const kbs = [], kqs = [], kps = [], kbMat = new TH.PointsMaterial({ color: 0x5a6578, size: 1.25, sizeAttenuation: false, transparent: true, opacity: .48 });
-    KC.forEach(cc => {
-      const arr = new Float32Array(cc.n * 3), g = new TH.BufferGeometry(); g.setAttribute('position', new TH.BufferAttribute(arr, 3));
-      const mat = kbMat.clone();
-      const pt = new TH.Points(g, mat); pt.frustumCulled = false; pt.userData.w = .0157 / Math.pow(cc.c, 1.5); kbs.push(pt); kps.push(arr);
-      kqs.push(Array.from({ length: cc.n }, () => [rnd() * 2 * PI, Math.min(50, Math.max(30, cc.c + cc.s * G3())), rnd() - .5]));
-    });
-    S.add(...belts, ...kbs, ...bms);
-
-    function fill() {
-      const R = real;
-      belts.forEach((bt, k) => {
-        bps[k].forEach(([a, au, y, sc, sy, sz, rx, ry], i) => {
-          const r = R ? au * AU_TO_UNITS : 43 + (au - 2.2) * 14, t = Math.min(1, Math.max(0, (au - 2.2) / 1.0)), v = .82 + (rx % 1) * .3;
-          o.position.set(Math.cos(a) * r, y * (R ? .4 * AU_TO_UNITS : 2.4), Math.sin(a) * r); o.rotation.set(rx, ry, 0);
-          o.scale.set(sc * (R ? .3 : 1), sc * sy * (R ? .3 : 1), sc * sz * (R ? .3 : 1));
-          o.updateMatrix(); bt.setMatrixAt(i, o.matrix);
-          bcol.setRGB((.64 - .2 * t) * v, (.56 - .15 * t) * v, (.47 - .09 * t) * v); bt.setColorAt(i, bcol);
-          bmArr[k][i * 3] = o.position.x; bmArr[k][i * 3 + 1] = o.position.y; bmArr[k][i * 3 + 2] = o.position.z;
-        });
-        bt.instanceMatrix.needsUpdate = true; bt.instanceColor.needsUpdate = true; bms[k].visible = !!R; bms[k].geometry.attributes.position.needsUpdate = true;
-      });
-      kqs.forEach((q, k) => {
-        q.forEach(([a, au, y], i) => { const r = R ? au * AU_TO_UNITS : 150 + (au - 30) * 2; kps[k].set([Math.cos(a) * r, y * (R ? .25 * r : 14 * r / 170), Math.sin(a) * r], i * 3); });
-        kbs[k].geometry.attributes.position.needsUpdate = true;
-      });
-    }
-
-    const targets = [];
-    bodies.forEach(b => {
-      targets.push(b);
-      if (b.mo && b.mo.length) b.mo.map(p => ({ isMoon: true, n: p.userData.name, g: p.children[0], grp: p, parent: b, ud: p.userData, get r() { return this.g.scale.x; } })).sort((x, y) => x.n.localeCompare(y.n, 'ru')).forEach(t => targets.push(t));
-    });
-    let ci = 0, spI = 1, tm = 0, mt = 0, last = performance.now(), th = .4, ph = 1.3, dist = ov, dd = ov, cur = bodies[0];
-    const wv = new TH.Vector3();
-    const wpos = b => { if (b.isMoon) { b.g.updateWorldMatrix(true, false); return b.g.getWorldPosition(wv); } return b.g.position; };
-    function objSpin(b) {
-      if (!b || b.isRoot) return 0;
-      if (b.isMoon) return b.grp ? b.grp.rotation.y : 0;
-      if (b.isSun) return b.g.rotation.y;
-      return b.m ? b.m.rotation.y : 0;
-    }
-    function objTiltQ(b) {
-      if (!b || b.isRoot || b.isSun || b.isMoon) return null;
-      const d = b.tilt;
-      if (d == null || d === 0) return null;
-      return new TH.Quaternion().setFromAxisAngle(ZA, d * PI / 180);
-    }
-    const tgv = new TH.Vector3(), off = new TH.Vector3(), camOff = new TH.Vector3(), pt = new Map(), el = renderer.domElement;
-    const qId = new TH.Quaternion();
-    const appliedQ = new TH.Quaternion();
-    const cl = v => Math.min(real ? 2e7 : 900, Math.max(cur.isMoon ? cur.r * 1.5 : cur.r * 1.6 + 0.5, v));
-    let pd = 0;
-    const pinch = () => { if (pt.size < 2) return 0; const [a, b] = [...pt.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
-    el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); pt.set(e.pointerId, [e.clientX, e.clientY]); pd = pinch(); });
-    el.addEventListener('pointermove', e => {
-      const o = pt.get(e.pointerId); if (!o) return;
-      if (pt.size == 1) { th -= (e.clientX - o[0]) * .006; ph = Math.min(3, Math.max(.15, ph - (e.clientY - o[1]) * .006)); }
-      pt.set(e.pointerId, [e.clientX, e.clientY]);
-      if (pt.size == 2) { const d = pinch(); if (pd && d) dd = cl(dd * pd / d); pd = d; }
-    });
-    ['pointerup', 'pointercancel'].forEach(t => el.addEventListener(t, e => { pt.delete(e.pointerId); pd = pinch(); }));
-    el.addEventListener('wheel', e => { dd = cl(dd * (1 + Math.sign(e.deltaY) * .1)); }, { passive: true });
-    window.addEventListener('resize', () => { C.aspect = innerWidth / innerHeight; C.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
-
-    function place() {
-      for (const b of bodies) {
-        if (!b.a && b.a !== 0) continue; if (b.isRoot || b.isSun) continue;
-        const M = b.ph + tm * 0.0157 / b.T, e = b.ecc || 0;
-        let E = M; for (let i = 0; i < 5; i++) E = M + e * Math.sin(E);
-        b.E = E;
-        let x = b.a * (Math.cos(E) - e), y = 0, z = -b.a * Math.sqrt(Math.max(0, 1 - e * e)) * Math.sin(E);
-        const inc = b.incRad || 0;
-        if (inc) { const cy = y * Math.cos(inc) - z * Math.sin(inc), cz = y * Math.sin(inc) + z * Math.cos(inc); y = cy; z = cz; }
-        b.g.position.set(x, y, z);
-      }
-    }
-
-    const LL = new TH.Line(new TH.BufferGeometry(), new TH.LineBasicMaterial({ transparent: true, depthWrite: false })), LLbuf = new Float32Array(3 * 2400);
-    LL.geometry.setAttribute('position', new TH.BufferAttribute(LLbuf, 3)); LL.renderOrder = -1; LL.visible = false; LL.frustumCulled = false; S.add(LL);
-    let llFor = null;
-    function updateLocalOrbit() {
-      if (!orbitsVisible) {
-        if (llFor) { llFor.ln.visible = false; llFor = null; }
-        LL.visible = false;
-        return;
-      }
-      const fb = real ? (cur.isMoon ? cur.parent : cur) : null, ok = !!(fb && fb.ln && fb.au);
-      if (llFor && (llFor !== fb || !ok)) { llFor.ln.visible = orbitsVisible; llFor = null; LL.visible = false; }
-      if (!ok) return;
-      if (llFor !== fb) { llFor = fb; LL.material.color.copy(fb.ln.material.color); LL.material.opacity = fb.ln.material.opacity; LL.visible = true; }
-fb.ln.visible = false;
-      const e = fb.ecc || 0, a = fb.a, bb = a * Math.sqrt(1 - e * e), inc = fb.incRad || 0, si = Math.sin(inc), ci = Math.cos(inc), E0 = fb.E;
-      const P = E => { const sE = Math.sin(E); return [a * (Math.cos(E) - e), bb * sE * si, -bb * sE * ci]; };
-      const p0 = P(E0), dEdS = 1 / (a * Math.sqrt(1 - e * e * Math.cos(E0) * Math.cos(E0))), offs = [];
-      for (let s = Math.max(dist * .04, 1e-4); ; s *= 1.08) { const dE = s * dEdS; if (dE >= PI || offs.length > 1100) { offs.push(PI); break; } offs.push(dE); }
-      let k = 0; const put = E => { const q = P(E); LLbuf[k++] = q[0] - p0[0]; LLbuf[k++] = q[1] - p0[1]; LLbuf[k++] = q[2] - p0[2]; };
-      for (let i = offs.length - 1; i >= 0; i--) put(E0 - offs[i]); put(E0); for (let i = 0; i < offs.length; i++) put(E0 + offs[i]);
-      LL.geometry.setDrawRange(0, k / 3); LL.geometry.attributes.position.needsUpdate = true; LL.position.set(p0[0], p0[1], p0[2]);
-    }
-
-    const setPl = (b, f) => { if (b.axes) { b.m.scale.set(f * b.axes[0], f * b.axes[1], f * b.axes[2]); return; } const q = b.flat || 0, a = f / Math.cbrt(1 - q); b.m.scale.set(a, a * (1 - q), a); };
-    function sunLightSetup(base) {
-      if (real) { sunLight.decay = 0; sunLight.distance = 0; sunLight.userData.fm = 1; sunLight.intensity = base; return; }
-      const ds = bodies.filter(b => b.au), me = ds.find(b => b.n === 'Меркурий'), d = b => real ? b.au * AU_TO_UNITS : b.a0, dFar = Math.max(...ds.map(b => d(b) * (1 + b.ecc))), dRef = d(me), D = (dFar - .1 * dRef) / .9;
-      sunLight.decay = 1; sunLight.distance = D; sunLight.userData.fm = 1 - dRef / D; sunLight.intensity = base / sunLight.userData.fm;
-    }
-
-    function apply() {
-      let sunScale;
-      if (real) {
-        sunScale = SUN_REAL_KM / KM_PER_UNIT;
-        sunLightSetup(LIGHT_BASE_SUN * LIGHT_MUL_REAL);
-        sunLight.castShadow = false;
-        ambLight.intensity = LIGHT_BASE_AMB * LIGHT_MUL_REAL;
-      } else {
-        sunScale = 8;
-        sunLightSetup(2.6 * SIM_LIGHT_MUL);
-        sunLight.castShadow = true;
-        ambLight.intensity = 0.40 * SIM_LIGHT_MUL;
-      }
-      sunBaseScale = sunScale;
-      sunM.scale.setScalar(sunScale);
-      if (real) {
-        glow.scale.set(sunScale * 12, sunScale * 12, 1);
-        gl2.scale.set(sunScale * 35, sunScale * 35, 1);
-        gl3.scale.set(sunScale * 70, sunScale * 70, 1);
-        gl4.scale.set(sunScale * 140, sunScale * 140, 1);
-        gl5.scale.set(sunScale * 280, sunScale * 280, 1);
-        glow.material.opacity = 1.0; gl2.material.opacity = 0.95; gl3.material.opacity = 0.55; gl4.material.opacity = 0.32; gl5.material.opacity = 0.18;
-      } else {
-        glow.scale.set(sunScale * 7, sunScale * 7, 1);
-        gl2.scale.set(sunScale * 21, sunScale * 21, 1);
-        gl3.scale.set(sunScale * 45, sunScale * 45, 1);
-        gl4.scale.set(sunScale * 90, sunScale * 90, 1);
-        gl5.scale.set(sunScale * 160, sunScale * 160, 1);
-        glow.material.opacity = 0.9; gl2.material.opacity = 0.55; gl3.material.opacity = 0.30; gl4.material.opacity = 0.18; gl5.material.opacity = 0.10;
-      }
-      glFar.scale.set(sunScale * 30, sunScale * 30, 1);
-      glFar.material.opacity = 0.4;
-      for (const b of bodies) {
-        if (b.isRoot || b.isSun) continue;
-        b.a = real ? b.au * AU_TO_UNITS : b.baseA0;
-        const e = b.ecc || 0;
-        const segs = real ? 4096 : 512;
-        const pts = [];
-        for (let i = 0; i <= segs; i++) {
-          const M = i / segs * 2 * PI;
-          let E = M; for (let k = 0; k < 5; k++) E = M + e * Math.sin(E);
-          pts.push(new TH.Vector3(b.a * (Math.cos(E) - e), 0, b.a * Math.sqrt(Math.max(0, 1 - e * e)) * Math.sin(E)));
-        }
-        b.ln.geometry.dispose();
-        b.ln.geometry = new TH.BufferGeometry().setFromPoints(pts);
-        b.ln.scale.set(1, 1, 1);
-        b.ln.material.depthWrite = false;
-        b.ln.renderOrder = -1;
-        b.ln.material.opacity = real ? 0.22 : 0.32;
-        if (real) {
-          const f = b.kmR / KM_PER_UNIT;
-          setPl(b, f);
-          if (b.atm) b.atm.scale.setScalar(f);
-          if (b.cloudsMesh) b.cloudsMesh.scale.setScalar(f * 1.006);
-          if (b.vatm) b.vatm.scale.setScalar(f * 1.015);
-          if (b.ringMesh) b.ringMesh.scale.setScalar(f);
-          b.mo.forEach(p => {
-            const ud = p.userData;
-            const dist = (ud.mdist || 384400) / KM_PER_UNIT;
-            p.children[0].scale.setScalar((ud.mkm || 1737) / KM_PER_UNIT);
-            p.children[0].position.x = dist;
-            if (ud.orbit) {
-              const pts = []; for (let i = 0; i <= 128; i++) { const t = i / 128 * 2 * PI; pts.push(new TH.Vector3(Math.cos(t) * dist, 0, Math.sin(t) * dist)); }
-              ud.orbit.geometry.dispose(); ud.orbit.geometry = new TH.BufferGeometry().setFromPoints(pts);
-            }
-          });
-          b.r = f;
-        } else {
-          setPl(b, b.baseR0);
-          if (b.atm) b.atm.scale.setScalar(b.baseR0);
-          if (b.cloudsMesh) b.cloudsMesh.scale.setScalar(b.baseR0 * 1.012);
-          if (b.vatm) b.vatm.scale.setScalar(b.baseR0 * 1.02);
-          if (b.ringMesh) b.ringMesh.scale.setScalar(b.baseR0);
-          b.mo.forEach(p => {
-            const ud = p.userData;
-            p.children[0].scale.setScalar(ud.mr);
-            p.children[0].position.x = ud.d;
-            if (ud.orbit) {
-              const pts = []; for (let i = 0; i <= 128; i++) { const t = i / 128 * 2 * PI; pts.push(new TH.Vector3(Math.cos(t) * ud.d, 0, Math.sin(t) * ud.d)); }
-              ud.orbit.geometry.dispose(); ud.orbit.geometry = new TH.BufferGeometry().setFromPoints(pts);
-            }
-          });
-          b.r = b.baseR0;
-        }
-      }
-      bodies[0].d = real ? AU_TO_UNITS * 2.5 : ov;
-      bodies[0].r = real ? sunScale : 8;
-      bodies[1].r = real ? sunScale : 8;
-      fill();
-    }
-
-    const labels = [];
-    function clearLabels() { labels.forEach(l => l.el.remove()); labels.length = 0; }
-    function makeLabel(text, isMoon) { const el = document.createElement('div'); el.className = 'label' + (isMoon ? ' moon' : ''); el.textContent = text; document.body.appendChild(el); return el; }
-    function updateLabels() {
-      const v = new TH.Vector3();
-      labels.forEach(l => {
-        if (!l.obj) return;
-        if (l.isMoon && !moonLabelsVisible) { l.el.classList.remove('show'); return; }
-        l.obj.getWorldPosition(v); v.project(C);
-        const x = (v.x * .5 + .5) * innerWidth, y = (-v.y * .5 + .5) * innerHeight;
-        if (v.z > 1 || !isFinite(x) || !isFinite(y) || x < -24 || x > innerWidth + 24 || y < -12 || y > innerHeight + 12) l.el.classList.remove('show');
-        else { l.el.style.left = x + 'px'; l.el.style.top = y + 'px'; l.el.classList.add('show'); }
-      });
-    }
-    let infoCollapsed = false;
-    function showInfo(b) {
-      const el = $('#info');
-      if (!infoPanelVisible) { el.classList.remove('show'); return; }
-      if (b.isMoon) {
-        el.innerHTML = `<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body"><p>Спутник планеты: ${b.parent.n}</p><div class="row"><span class="k">Радиус</span><span>${b.ud.mkm.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Расстояние до планеты</span><span>${b.ud.mdist.toLocaleString('ru')} км</span></div></div>`;
-        el.classList.toggle('collapsed', infoCollapsed); el.classList.add('show');
-        el.querySelector('.info-head').onclick = () => { infoCollapsed = !infoCollapsed; el.classList.toggle('collapsed', infoCollapsed); };
-        return;
-      }
-      if (b.isRoot) { el.classList.remove('show'); return; }
-      let body = '';
-      if (b.isSun) {
-        body = `<p>${b.info || ''}</p><div class="row"><span class="k">Радиус</span><span>696 340 км</span></div><div class="row"><span class="k">Масса</span><span>1,989×10³⁰ кг</span></div><div class="row"><span class="k">Темп. поверхности</span><span>≈ 5500 °C</span></div>`;
-      } else {
-        body = `<p>${b.info || ''}</p><div class="row"><span class="k">Радиус</span><span>${b.kmR.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Орбита</span><span>${b.au} а.е.</span></div><div class="row"><span class="k">Период</span><span>${b.T} лет</span></div><div class="row"><span class="k">Эксцентриситет</span><span>${b.ecc}</span></div><div class="row"><span class="k">Свет Солнца</span><span>${(v => v >= 100 ? Math.round(v) : v >= 1 ? v.toFixed(1) : v.toPrecision(2))(100 / (b.au * b.au))}% от земного</span></div><div class="row"><span class="k">Наклон оси</span><span>${b.tilt == null ? '—' : b.tilt + '°'}</span></div>`;
-        if (b.mo && b.mo.length) body += `<div class="row"><span class="k">Спутники</span><span>${b.mo.map(p => p.userData.name).join(', ')}</span></div>`;
-      }
-      el.innerHTML = `<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body">${body}</div>`;
-      el.classList.toggle('collapsed', infoCollapsed);
-      el.classList.add('show');
-      el.querySelector('.info-head').onclick = () => { infoCollapsed = !infoCollapsed; el.classList.toggle('collapsed', infoCollapsed); };
-    }
-
-    const bar = $('#bar');
-    const fpsEl = document.createElement('div');
-    fpsEl.id = 'fps';
-    fpsEl.textContent = '— FPS';
-    document.body.append(fpsEl);
-    let _fFrames = 0, _fAccum = 0;
-
-    /* ============ Кнопка настроек (первая, левый край) ============ */
-    const setBtn = document.createElement('button');
-    setBtn.id = 'setBtn';
-    setBtn.title = 'Настройки';
-    setBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
-    bar.append(setBtn);
-
-    const setMenu = document.createElement('div');
-    setMenu.id = 'settingsMenu';
-    setMenu.innerHTML =
-      '<div class="section"><div class="section-label">Скорость</div>' +
-      '<div class="seg" id="speedSeg">' +
-        '<button data-sp="0">Пауза</button>' +
-        '<button data-sp="1" class="on">x1</button>' +
-        '<button data-sp="2">x16</button>' +
-        '<button data-sp="3">x256</button>' +
-      '</div></div>' +
-      '<div class="section"><div class="section-label">Режим</div>' +
-      '<div class="toggle" id="modeToggle">' +
-        '<div class="thumb"></div>' +
-        '<div class="opt" data-mode="0">Упрощённый</div>' +
-        '<div class="opt" data-mode="1">Реализм</div>' +
-      '</div></div>' +
-      '<div class="section"><div class="section-label">Камера</div>' +
-      '<div class="toggle real" id="camToggle">' +
-        '<div class="thumb"></div>' +
-        '<div class="opt" data-cam="0">Мировая</div>' +
-        '<div class="opt" data-cam="1">Планетарная</div>' +
-      '</div></div>' +
-      '<div class="divider"></div>' +
-      '<div class="section">' +
-        '<div class="row"><span>Линии орбит</span><label class="sw"><input type="checkbox" id="orbitsChk" checked><span></span></label></div>' +
-        '<div class="row"><span>Подписи спутников</span><label class="sw"><input type="checkbox" id="moonLabelsChk" checked><span></span></label></div>' +
-        '<div class="row"><span>Панель информации</span><label class="sw"><input type="checkbox" id="infoChk" checked><span></span></label></div>' +
-      '</div>';
-    document.body.append(setMenu);
-
-    const toggleMenu = () => {
-      setMenu.classList.toggle('open');
-      setBtn.classList.toggle('open');
-    };
-    setBtn.onclick = e => { e.stopPropagation(); toggleMenu(); };
-    document.addEventListener('click', e => {
-      if (setMenu.classList.contains('open') && !setMenu.contains(e.target) && !setBtn.contains(e.target)) {
-        setMenu.classList.remove('open'); setBtn.classList.remove('open');
-      }
-    });
-
-    setMenu.querySelectorAll('#speedSeg button').forEach(btn => {
-      btn.onclick = () => {
-        spI = parseInt(btn.dataset.sp, 10);
-        setMenu.querySelectorAll('#speedSeg button').forEach(b => b.classList.toggle('on', b === btn));
-      };
-    });
-
-    const modeToggle = setMenu.querySelector('#modeToggle');
-    modeToggle.classList.toggle('real', !!real);
-    modeToggle.querySelectorAll('.opt').forEach(opt => {
-      opt.onclick = () => {
-        const m = parseInt(opt.dataset.mode, 10);
-        if (!!m === !!real) return;
-        real = m;
-        modeToggle.classList.toggle('real', !!real);
-        apply(); pick(ci);
-      };
-    });
-
-    const camToggle = setMenu.querySelector('#camToggle');
-    camToggle.classList.toggle('real', camMode === 1);
-    camToggle.querySelectorAll('.opt').forEach(opt => {
-      opt.onclick = () => {
-        const m = parseInt(opt.dataset.cam, 10);
-        if (m === camMode) return;
-        camMode = m;
-        camToggle.classList.toggle('real', camMode === 1);
-      };
-    });
-
-    setMenu.querySelector('#orbitsChk').addEventListener('change', e => {
-      orbitsVisible = e.target.checked;
-      pick(ci);
-    });
-    setMenu.querySelector('#moonLabelsChk').addEventListener('change', e => {
-      moonLabelsVisible = e.target.checked;
-      updateLabels();
-    });
-    setMenu.querySelector('#infoChk').addEventListener('change', e => {
-      infoPanelVisible = e.target.checked;
-      if (infoPanelVisible) showInfo(cur);
-      else $('#info').classList.remove('show');
-    });
-
-    /* ============ Dropdown выбора цели (второй, рядом с настройками) ============ */
-    const drop = document.createElement('div'); drop.className = 'dd';
-    const dropBtn = document.createElement('button'); dropBtn.className = 'dd-btn';
-    const dropList = document.createElement('div'); dropList.className = 'dd-list';
-
-    function pick(i) {
-      const b = targets[i]; ci = i; off.copy(tgv).sub(wpos(b)); cur = b;
-      spinRef = objSpin(b);
-      const _q = objTiltQ(b);
-      if (_q) curTiltQ.copy(_q); else curTiltQ.identity();
-      dd = b.d || (b.isSun ? (real ? sunBaseScale * 3.5 : 100) : b.isMoon ? (real ? b.r * 8 : b.r * 7 + 6) : b.r * (real ? 5 : 7) + (real ? Math.min(6, b.r * 8) : 6));
-      dropBtn.innerHTML = b.n + ' <span class="tri">▲</span>';
-      dropList.querySelectorAll('.dd-item').forEach((el, j) => el.classList.toggle('on', j === i));
-      clearLabels();
-      bodies.forEach(bb => { if (bb.mo) bb.mo.forEach(p => { if (p.userData.orbit) p.userData.orbit.visible = false; }); });
-      const pb = b.isMoon ? b.parent : b;
-      if (pb.mo && pb.mo.length) {
-        pb.mo.forEach(p => { const ml = makeLabel(p.userData.name, true); labels.push({ el: ml, obj: p.children[0], isMoon: true }); if (p.userData.orbit) p.userData.orbit.visible = orbitsVisible; });
-      }
-      venCtl.classList.toggle('show', !b.isMoon && b.k === 'ven');
-      /* Панель нормал-мапы — только для Луны. */
-      nrmTarget = (b.isMoon && b.n === 'Луна' && b.ud && b.ud.nrmU) ? b.ud.nrmU : null;
-      if (nrmTarget) { syncNrmUI(); nrmCtl.classList.add('show'); }
-      else nrmCtl.classList.remove('show');
-      showInfo(b);
-    }
-
-    dropBtn.innerHTML = 'Обзор <span class="tri">▲</span>';
-    const hd = t => { const e = document.createElement('div'); e.className = 'dd-head'; e.textContent = t; return e; };
-    const fp = bodies.find(b => !b.isRoot && !b.isSun && !b.dw), fd = bodies.find(b => b.dw);
-    targets.forEach((b, i) => {
-      if (b === fp) dropList.append(hd('Планеты'));
-      if (b === fd) dropList.append(hd('Карликовые планеты'));
-      const item = document.createElement('button'); item.className = 'dd-item' + (b.isMoon ? ' moon' : '');
-      if (b.isMoon) { const bl = document.createElement('span'); bl.className = 'bl'; bl.textContent = '•'; const it = document.createElement('i'); it.textContent = b.n; item.append(bl, it); }
-      else item.textContent = b.n;
-      item.onclick = (e) => { e.stopPropagation(); pick(i); drop.classList.remove('open'); };
-      dropList.append(item);
-    });
-    dropBtn.onclick = e => { e.stopPropagation(); drop.classList.toggle('open'); if (drop.classList.contains('open')) { const on = dropList.querySelector('.dd-item.on'); if (on) on.scrollIntoView({ block: 'center' }); } };
-    drop.append(dropBtn, dropList); bar.append(drop);
-    document.addEventListener('click', () => drop.classList.remove('open'));
-
-    /* ============ Кнопка фулскрина (последняя, правый край) ============ */
-    {
-      const fsBtn = document.createElement('button'); fsBtn.id = 'fsBtn'; fsBtn.title = 'Полноэкранный режим';
-      const fsEnter = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
-      const fsExit = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
-      fsBtn.innerHTML = fsEnter;
-      fsBtn.style.marginLeft = 'auto';
-      fsBtn.onclick = () => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen?.() || document.documentElement.webkitRequestFullscreen?.(); } else { document.exitFullscreen?.() || document.webkitExitFullscreen?.(); } };
-      document.addEventListener('fullscreenchange', () => { fsBtn.innerHTML = document.fullscreenElement ? fsExit : fsEnter; });
-      document.addEventListener('webkitfullscreenchange', () => { fsBtn.innerHTML = document.fullscreenElement ? fsExit : fsEnter; });
-      bar.append(fsBtn);
-    }
-
-    apply(); pick(0);
-    console.log('[phase] ready');
-
-    function loop(now) {
-      requestAnimationFrame(loop);
-      const dt = Math.min((now - last) / 1000, .05); last = now;
-      _fFrames++; _fAccum += dt;
-      if (_fAccum >= 0.5) {
-        fpsEl.textContent = Math.round(_fFrames / _fAccum) + ' FPS';
-        _fFrames = 0; _fAccum = 0;
-      }
-      const s = SPEEDS[spI], q = Math.sqrt(s); tm += dt * s; mt += dt * q;
-      sunM.rotation.y += dt * .004 * q;
-
-      const M = SUN_GLOW_BASE;
-      if (real) {
-        glow.material.opacity = Math.min(1, (0.95 + 0.05 * Math.sin(now / 600)) * M);
-        gl2.material.opacity  = Math.min(1, (0.88 + 0.05 * Math.sin(now / 700)) * M);
-        gl3.material.opacity  = Math.min(1, (0.50 + 0.05 * Math.sin(now / 800)) * M);
-        gl4.material.opacity  = Math.min(1, (0.28 + 0.04 * Math.sin(now / 900)) * M);
-        gl5.material.opacity  = Math.min(1, (0.15 + 0.03 * Math.sin(now / 1100)) * M);
-      } else {
-        glow.material.opacity = Math.min(1, (0.85 + 0.10 * Math.sin(now / 600)) * M);
-        gl2.material.opacity  = Math.min(1, 0.55 * M);
-        gl3.material.opacity  = Math.min(1, (0.28 + 0.04 * Math.sin(now / 900)) * M);
-        gl4.material.opacity  = Math.min(1, (0.16 + 0.03 * Math.sin(now / 1000)) * M);
-        gl5.material.opacity  = Math.min(1, (0.09 + 0.02 * Math.sin(now / 1200)) * M);
-      }
-
-      {
-        const distSun = C.position.distanceTo(sunM.position);
-
-        const minPx = 3;
-        const minAng = minPx * (C.fov * PI / 180) / innerHeight;
-        const sunRvis = Math.max(sunBaseScale, distSun * minAng * 0.5);
-        sunM.scale.setScalar(sunRvis);
-
-        const refDist = real ? AU_TO_UNITS * 3 : 40;
-        const grow = 1 + Math.min(distSun / refDist, 2);
-        const glFarScale = Math.max(sunM.scale.x * 1.5, distSun * 0.04 * grow);
-        glFar.scale.set(glFarScale, glFarScale, 1);
-
-        const bBase = real ? 0.38 : 0.26;
-        const bMul  = 1 + Math.min(distSun / refDist, 2);
-        const pulse = (real ? 0.06 : 0.04) * Math.sin(now / 700);
-        glFar.material.opacity = Math.max(0, Math.min(1, (bBase * bMul + pulse) * M));
-      }
-
-      place();
-      for (const b of bodies) { if (b.ln) b.ln.visible = orbitsVisible; }
-      updateLocalOrbit();
-      for (const b of bodies) {
-        if (b.isRoot || b.isSun) continue;
-        b.m.rotation.y += dt * q * (b.k in SPIN ? SPIN[b.k] : b.T > 5 ? .3 : .14);
-        if (b.cloudsMesh) b.cloudsMesh.rotation.y = b.m.rotation.y * 1.06 + .7;
-        if (b.vatm) b.vatm.rotation.y = b.m.rotation.y * 1.15 + .3;
-        for (const p of b.mo) p.rotation.y = p.userData.ph + mt * p.userData.sp * 0.1;
-        if (b.ringMesh) b.ringMesh.rotation.z += dt * q * 0.08;
-      }
-      belts.forEach((bt, k) => { bt.rotation.y = tm * bt.userData.w; bms[k].rotation.y = bt.rotation.y; });
-      kbs.forEach(k => { k.rotation.y = tm * k.userData.w; });
-
-      {
-        const camAU = C.position.length() / AU_TO_UNITS;
-        belts.forEach((bt, k) => {
-          if (real) {
-            const dAU = Math.abs(camAU - BC[k].c);
-            const fade = Math.max(0.05, Math.min(1, 1 - (dAU - 3) / 17));
-            bms[k].material.opacity = 0.36 * fade;
-          } else {
-            bms[k].material.opacity = 0.36;
-          }
-        });
-        kbs.forEach((kb, k) => {
-          if (real) {
-            const dAU = Math.abs(camAU - KC[k].c);
-            const fade = Math.max(0.05, Math.min(1, 1 - (dAU - 3) / 17));
-            kb.material.opacity = 0.48 * fade;
-          } else {
-            kb.material.opacity = 0.48;
-          }
-        });
-      }
-
-      off.multiplyScalar(Math.exp(-dt * 4)); tgv.copy(wpos(cur)).add(off);
-      dist += (dd - dist) * Math.min(1, dt * 6);
-
-      /* Сглаживание наклона и плавное переключение режима камеры. */
-      smoothTiltQ.slerp(curTiltQ, Math.min(1, dt * 4));
-      camMix += (camMode - camMix) * Math.min(1, dt * 3);
-      if (camMix >= 0.999) appliedQ.copy(smoothTiltQ);
-      else if (camMix <= 0.001) appliedQ.copy(qId);
-      else { appliedQ.copy(qId).slerp(smoothTiltQ, camMix); }
-
-      /* Позиция камеры в системе отсчёта цели (азимут — за спином, наклон — вокруг наклонённой оси). */
-      const thSpin = th + (objSpin(cur) - spinRef) * camMix;
-      const sp0 = Math.sin(ph), cp0 = Math.cos(ph);
-      camOff.set(dist * sp0 * Math.sin(thSpin), dist * cp0, dist * sp0 * Math.cos(thSpin));
-      camOff.applyQuaternion(appliedQ);
-      C.position.set(tgv.x + camOff.x, tgv.y + camOff.y, tgv.z + camOff.z);
-
-      /* up = ось вращения планеты → север/юг всегда на месте. */
-      C.up.set(0, 1, 0).applyQuaternion(appliedQ);
-      C.lookAt(tgv);
-
-      C.near = Math.max(dist * .004, .0005); C.far = 1e8; C.updateProjectionMatrix();
-      sky.scale.setScalar(Math.max(1, dist / 1000)); sky.position.copy(C.position);
-      glow.position.copy(sunM.position); gl2.position.copy(sunM.position); gl3.position.copy(sunM.position); gl4.position.copy(sunM.position); gl5.position.copy(sunM.position); glFar.position.copy(sunM.position);
-      C.updateMatrixWorld(); C.matrixWorldInverse.copy(C.matrixWorld).invert();
-      earthU.uSunV.value.copy(earthB.g.position).negate().normalize().transformDirection(C.matrixWorldInverse);
-
-      if (skySphere) {
-        let bright = SIM_SKY_BRIGHT;
-        if (real) {
-          const camR = C.position.length() / AU_TO_UNITS;
-          const t = Math.min(camR / SKY_REF, 1);
-          bright = (SKY_SUN + (1 - SKY_SUN) * t) * SKY_DIM_MUL;
-        }
-        skySphere.userData.uni.uBright.value = Math.max(0, bright);
-        skySphere.userData.uni.uLinear.value = real ? 1 : 0;
-      }
-
-      let sOf = null;
-      {
-        if (real) { sOf = pos => Math.min(1e4, Math.pow(1 / Math.max(.02, pos / AU_TO_UNITS), 0.5)); }
-        if (real || wasP) {
-          const sc = (mat, s) => {
-            if (!mat) return;
-            const u = mat.userData, c0 = u.c0 || (u.c0 = mat.color.clone());
-            mat.color.copy(c0).multiplyScalar(s);
-            if (!mat.emissiveMap) { if (u.e0 === undefined) u.e0 = mat.emissiveIntensity; mat.emissiveIntensity = u.e0 * s; }
-          };
-          for (const b of bodies) {
-            if (!b.m) continue;
-            const s = real ? sOf(b.g.position.length()) : 1;
-            sc(b.m.material, s); if (b.cloudsMesh) sc(b.cloudsMesh.material, s); if (b.vatm) sc(b.vatm.material, s); if (b.ringMesh) sc(b.ringMesh.material, s);
-            for (const p of b.mo) sc(p.children[0].material, s);
-          }
-          belts.forEach((bt, k) => sc(bt.material, real ? sOf(BC[k].c * AU_TO_UNITS) : 1));
-          wasP = real;
-        }
-      }
-      for (const b of bodies) {
-        if (!b.atm) continue;
-        const U = b.atm.material.uniforms;
-        U.uI.value = b.atm.userData.I0 * (real ? sOf(b.g.position.length()) : Math.max(0, 1 - b.g.position.length() / sunLight.distance) / sunLight.userData.fm);
-        const ta = -b.tilt * PI / 180;
-        U.uC.value.copy(C.position).sub(b.g.position).divideScalar(b.atm.scale.x).applyAxisAngle(ZA, ta);
-        U.uS.value.copy(b.g.position).negate().normalize().applyAxisAngle(ZA, ta);
-      }
-      {
-        const R = satB.ringU;
-        R.uSun.value.copy(satB.g.position).negate();
-        R.uA.value = satB.m.scale.x; R.uCc.value = satB.m.scale.y; R.uS.value = satB.ringMesh.scale.x;
-      }
-      renderer.render(S, C);
-      updateLabels();
-    }
-
-    await prog(100, 'Готово'); ld.classList.add('done');
-    setTimeout(() => ld.remove(), 800);
-    requestAnimationFrame(loop);
-  } catch (e) {
-    showError('[fatal] ' + (e && e.message || e));
-    lt.textContent = 'Ошибка загрузки: ' + (e && e.message || e);
-    console.error(e);
-  }
+  normal = normalize(mix(_nSaved, normal, _litF)); }`);});}
+function patchSunLighting(){const seen=new Set(),M0=TH.Material.prototype.onBeforeCompile;let idCounter=0;const wrap=mat=>{if(seen.has(mat))return;seen.add(mat);const prev=mat.onBeforeCompile,custom=prev!==M0,key='sun|'+(custom?prev.toString():'')+'|'+(idCounter++);mat.onBeforeCompile=function(sh){if(custom)prev.call(this,sh);sunPatch(sh);};mat.customProgramCacheKey=()=>key;mat.needsUpdate=true;};const obj=mesh=>{if(!mesh)return;wrap(mesh.material);mesh.onBeforeRender=function(r,sc,cam){const e=this.matrixWorld.elements;sunV.set(-e[12],-e[13],-e[14]);const Lv=sunV.length();sunV.transformDirection(cam.matrixWorldInverse);SUNU.uSunDir.value.copy(sunV).multiplyScalar(real?1:Lv);};};for(const b of bodies){if(!b.m)continue;obj(b.m);obj(b.cloudsMesh);obj(b.vatm);obj(b.ringMesh);for(const p of b.mo)obj(p.children[0]);}}
+const PLs=`{vec3 Lr=normalize(uSun-vRel);float dn=dot(Lr,uN);float sh=1.;if(abs(dn)>.0001){float tt=-dot(vRel,uN)/dn;if(tt>0.){vec3 Hh=vRel+Lr*tt;float uu=(length(Hh)/uS-1.3)/1.1;if(uu>0.&&uu<1.)sh=1.-.9*texture2D(uRT,vec2(uu,.5)).a;}}reflectedLight.directDiffuse*=sh;reflectedLight.directSpecular*=sh;}`;
+const RGs=`{vec3 Lr=normalize(uSun-vRel);vec3 Rn=uN*dot(vRel,uN);vec3 Rp=vRel-Rn;vec3 Ln=uN*dot(Lr,uN);vec3 Lp=Lr-Ln;vec3 R2=Rp/uA+Rn/uCc;vec3 L2=Lp/uA+Ln/uCc;float A2=dot(L2,L2);float B2=dot(R2,L2);float D2=B2*B2-A2*(dot(R2,R2)-1.);float sh=1.;if(D2>0.&&B2<0.)sh=1.-.92*smoothstep(0.,.05,D2/A2);reflectedLight.directDiffuse*=sh;reflectedLight.directSpecular*=sh;}`;
+const RPs='uniform vec3 uSun;uniform vec3 uN;uniform float uS;uniform float uA;uniform float uCc;uniform sampler2D uRT;varying vec3 vRel;\n';
+const patchV=sh=>{sh.vertexShader='varying vec3 vRel;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvRel=mat3(modelMatrix)*transformed;');};
+DB.forEach(([n,a0,r0,Tp,tilt,k,tint,ms,ring,kmR,au,ecc,orbInc,info,dw])=>{
+const g=new TH.Group(),tg=new TH.Group();
+const matOpts={map:tx[k],color:tint,roughness:0.92,metalness:0,emissive:0x0a0a0a,emissiveIntensity:0.08};
+const realNormalKey=k==='earth'?'earth_normal':k==='mars'?'mars_normal':null;
+let hasNormal=false;let myNrmU=null;
+if(realNormalKey&&normalTextures[realNormalKey]){matOpts.normalMap=normalTextures[realNormalKey];matOpts.normalScale=k==='mars'?new TH.Vector2(-1,1):new TH.Vector2(1,1);myNrmU=(k==='earth')?makeNrmU(false,0.55):makeNrmU(false);hasNormal=true;}
+const m=new TH.Mesh(new TH.SphereGeometry(1,48,32),new TH.MeshStandardMaterial(matOpts));
+m.castShadow=true;m.receiveShadow=true;
+let cloudsMesh=null,vatm=null;
+tg.rotation.z=tilt*PI/180;tg.add(m);g.add(tg);
+if(k==='earth'){m.material.color.setRGB(1.0,1.0,0.98);if(tx.cl){cloudsMesh=new TH.Mesh(new TH.SphereGeometry(1,48,32),new TH.MeshStandardMaterial({color:0xffffff,alphaMap:tx.cl,transparent:true,depthWrite:false,roughness:1,metalness:0,opacity:0.95,side:TH.FrontSide}));cloudsMesh.renderOrder=1;tg.add(cloudsMesh);}const em=m.material;if(tx.cit){em.emissiveMap=tx.cit;em.emissive.set(0xffcc88);em.emissiveIntensity=0.95;chainPatch(em,sh=>{sh.uniforms.uSunV=earthU.uSunV;sh.fragmentShader='uniform vec3 uSunV;\n'+sh.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance*=1.-smoothstep(-.04,.10,dot(normalize(normal),uSunV));');});}}
+if(k==='ven'&&tx.ven_atm){vatm=new TH.Mesh(new TH.SphereGeometry(1,48,32),new TH.MeshStandardMaterial({map:tx.ven_atm,transparent:true,depthWrite:false,roughness:1,metalness:0,opacity:0.92,side:TH.FrontSide}));vatm.renderOrder=1;tg.add(vatm);}
+if(hasNormal)applyNormalPatches(m.material,myNrmU);
+let atm=null;
+{const ap=ATM[k];if(ap){atm=makeAtm(ap,({jup:.06487,sat:.09796})[k]);atm.renderOrder=3;atm.userData.I0=ap.i;atm.rotation.z=tilt*PI/180;g.add(atm);}}
+let ringMesh=null,ringTex=null,rU=null;
+if(ring){const rg=new TH.RingGeometry(1.3,2.4,128),p=rg.attributes.position,u=rg.attributes.uv,v=new TH.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);u.setXY(i,(v.length()-1.3)/1.1,0);}const rc=document.createElement('canvas');rc.width=256;rc.height=1;const x=rc.getContext('2d');for(let i=0;i<256;i++){const t=i/256,al=t<.06||t>.97?0:t>.5&&t<.57?.05:.3+.6*Math.abs(Math.sin(i*.8)*Math.sin(i*.19+1));x.fillStyle=`rgba(${215-t*40|0},${190-t*40|0},${150-t*30|0},${al})`;x.fillRect(i,0,1,1);}ringTex=new TH.CanvasTexture(rc);ringMesh=new TH.Mesh(rg,new TH.MeshStandardMaterial({map:ringTex,emissive:0x2a241a,roughness:1,metalness:0,transparent:true,side:TH.DoubleSide,depthWrite:false}));ringMesh.rotation.x=PI/2;tg.add(ringMesh);rU={uSun:{value:new TH.Vector3()},uN:{value:new TH.Vector3(0,1,0).applyAxisAngle(new TH.Vector3(0,0,1),tilt*PI/180)},uS:{value:1},uA:{value:1},uCc:{value:1},uRT:{value:ringTex}};m.material.onBeforeCompile=sh=>{Object.assign(sh.uniforms,rU);patchV(sh);sh.fragmentShader=RPs+sh.fragmentShader.replace('#include <lights_fragment_end>','#include <lights_fragment_end>\n'+PLs);};ringMesh.material.onBeforeCompile=sh=>{Object.assign(sh.uniforms,rU);patchV(sh);sh.fragmentShader=RPs+sh.fragmentShader.replace('#include <lights_fragment_end>','#include <lights_fragment_end>\n'+RGs);};}
+const mo=ms.map(([d,mr,sp,col,mkm,mdist,mname])=>{
+const pv=new TH.Group();
+const moonNrmKey=mname==='Луна'?'moon_normal':null;
+const mmOpts={map:tx[MTEX[mname]||'moon'],color:col,roughness:0.95,metalness:0,emissive:0x050505,emissiveIntensity:0.05};
+let moonNrmU=null;
+if(moonNrmKey&&normalTextures[moonNrmKey]){mmOpts.normalMap=normalTextures[moonNrmKey];mmOpts.normalScale=new TH.Vector2(1,1);moonNrmU=makeNrmU(true,0.45);}
+const mm=new TH.Mesh(ROCK[mname]?ROCK[mname]():new TH.SphereGeometry(1,24,16),new TH.MeshStandardMaterial(mmOpts));
+if(moonNrmU)applyNormalPatches(mm.material,moonNrmU);
+mm.castShadow=true;mm.receiveShadow=true;
+if(mname==='Луна')mm.rotation.y=PI;
+pv.rotation.order='ZXY';pv.rotation.z=(k==='earth'?0:tilt)*PI/180;pv.rotation.x=(MINC[mname]||0)*PI/180;
+mm.position.x=d;mm.scale.setScalar(mr);pv.add(mm);
+const mPts=[];for(let i=0;i<=128;i++){const t=i/128*2*PI;mPts.push(new TH.Vector3(Math.cos(t)*d,0,Math.sin(t)*d));}
+const mLn=new TH.Line(new TH.BufferGeometry().setFromPoints(mPts),new TH.LineBasicMaterial({color:0x8899bb,transparent:true,opacity:0.14,depthWrite:false}));mLn.visible=false;mLn.renderOrder=-2;pv.add(mLn);
+pv.userData={sp:mname==='Тритон'?Math.abs(sp):sp,ph:rnd()*6.28,d,mr,mkm:mkm||1737,mdist:mdist||384400,name:mname||'Спутник',orbit:mLn,nrmU:moonNrmU};
+g.add(pv);return pv;});
+const pts=[];for(let i=0;i<=512;i++){const t=i/512*2*PI;pts.push(new TH.Vector3(Math.cos(t),0,Math.sin(t)));}
+const ln=new TH.Line(new TH.BufferGeometry().setFromPoints(pts),new TH.LineBasicMaterial({color:0x7a8aab,transparent:true,opacity:.32,depthWrite:false}));
+const incRad=(orbInc||0)*PI/180;if(dw)ln.material.color.set(0xa88f6e);
+ln.rotation.x=incRad;
+S.add(g,ln);
+bodies.push({n,g,ln,r:r0,r0,a:a0,a0,kmR,au,ecc:ecc||0,orbInc:orbInc||0,incRad,T:Tp,k,m,mo,ph:rnd()*6.28,moonData:ms,ringMesh,atm,tg,baseA0:a0,baseR0:r0,info,tilt,dw,axes:AXS[k],cloudsMesh,vatm,flat:({jup:.06487,sat:.09796})[k]||0,ringU:rU,hasNormal,nrmU:myNrmU});});
+const satB=bodies.find(b=>b.k==='sat'),earthB=bodies.find(b=>b.k==='earth'),venB=bodies.find(b=>b.k==='ven');
+patchSunLighting();
+const VEN_MAX_REAL=0.92;
+const venCtl=document.createElement('div');venCtl.id='venAtmCtl';
+venCtl.innerHTML='<label>Атмосфера</label><input type="range" id="venAtmSlider" min="0" max="100" step="1" value="100"><span class="v" id="venAtmVal">100%</span>';
+document.body.append(venCtl);
+const venSlider=document.getElementById('venAtmSlider'),venVal=document.getElementById('venAtmVal');
+venSlider.addEventListener('input',()=>{const p=parseInt(venSlider.value,10);venVal.textContent=p+'%';if(venB&&venB.vatm)venB.vatm.material.opacity=(p/100)*VEN_MAX_REAL;});
+['pointerdown','click','touchstart'].forEach(ev=>venSlider.addEventListener(ev,e=>e.stopPropagation(),ev==='touchstart'?{passive:true}:false));
+await prog(85,'Пояса астероидов…');
+const BC=[{c:2.3,s:.14,n:Math.max(30,Math.floor(760*Q.asteroidMul))},{c:2.65,s:.12,n:Math.max(30,Math.floor(900*Q.asteroidMul))},{c:3,s:.14,n:Math.max(30,Math.floor(840*Q.asteroidMul))}];
+const BGm=new TH.DodecahedronGeometry(1,0),BMt=new TH.MeshStandardMaterial({color:0xffffff,roughness:1,flatShading:true}),o=new TH.Object3D(),bcol=new TH.Color(),G3=()=>(rnd()+rnd()+rnd()-1.5)*2;
+const belts=[],bms=[],bps=[],bmArr=[];
+BC.forEach((cc,k)=>{const m=new TH.InstancedMesh(BGm,BMt.clone(),cc.n);m.frustumCulled=false;m.userData.w=.0157/Math.pow(cc.c,1.5);belts.push(m);bps.push(Array.from({length:cc.n},()=>[rnd()*2*PI,Math.min(3.32,Math.max(2.08,cc.c+cc.s*G3())),rnd()-.5,.05+rnd()**3*.35,.6+rnd()*.6,.7+rnd()*.5,rnd()*6,rnd()*6]));const arr=new Float32Array(cc.n*3),g=new TH.BufferGeometry();g.setAttribute('position',new TH.BufferAttribute(arr,3));bmArr.push(arr);const bm=new TH.Points(g,new TH.PointsMaterial({color:0x56524b,size:1.25,sizeAttenuation:false,transparent:true,opacity:.36}));bm.visible=false;bm.frustumCulled=false;bms.push(bm);});
+const KC=[{c:34,s:3.4,n:Math.max(60,Math.floor(1100*Q.kuiperMul))},{c:41,s:3,n:Math.max(60,Math.floor(1100*Q.kuiperMul))},{c:47,s:3,n:Math.max(40,Math.floor(800*Q.kuiperMul))}];
+const kbs=[],kqs=[],kps=[],kbMat=new TH.PointsMaterial({color:0x5a6578,size:1.25,sizeAttenuation:false,transparent:true,opacity:.48});
+KC.forEach(cc=>{const arr=new Float32Array(cc.n*3),g=new TH.BufferGeometry();g.setAttribute('position',new TH.BufferAttribute(arr,3));const mat=kbMat.clone();const pt=new TH.Points(g,mat);pt.frustumCulled=false;pt.userData.w=.0157/Math.pow(cc.c,1.5);kbs.push(pt);kps.push(arr);kqs.push(Array.from({length:cc.n},()=>[rnd()*2*PI,Math.min(50,Math.max(30,cc.c+cc.s*G3())),rnd()-.5]));});
+S.add(...belts,...kbs,...bms);
+function fill(){const R=real;belts.forEach((bt,k)=>{bps[k].forEach(([a,au,y,sc,sy,sz,rx,ry],i)=>{const r=R?au*AU_TO_UNITS:43+(au-2.2)*14,t=Math.min(1,Math.max(0,(au-2.2)/1.0)),v=.82+(rx%1)*.3;o.position.set(Math.cos(a)*r,y*(R?.4*AU_TO_UNITS:2.4),Math.sin(a)*r);o.rotation.set(rx,ry,0);o.scale.set(sc*(R?.3:1),sc*sy*(R?.3:1),sc*sz*(R?.3:1));o.updateMatrix();bt.setMatrixAt(i,o.matrix);bcol.setRGB((.64-.2*t)*v,(.56-.15*t)*v,(.47-.09*t)*v);bt.setColorAt(i,bcol);bmArr[k][i*3]=o.position.x;bmArr[k][i*3+1]=o.position.y;bmArr[k][i*3+2]=o.position.z;});bt.instanceMatrix.needsUpdate=true;bt.instanceColor.needsUpdate=true;bms[k].visible=!!R;bms[k].geometry.attributes.position.needsUpdate=true;});kqs.forEach((q,k)=>{q.forEach(([a,au,y],i)=>{const r=R?au*AU_TO_UNITS:150+(au-30)*2;kps[k].set([Math.cos(a)*r,y*(R?.25*r:14*r/170),Math.sin(a)*r],i*3);});kbs[k].geometry.attributes.position.needsUpdate=true;});}
+const targets=[];
+bodies.forEach(b=>{targets.push(b);if(b.mo&&b.mo.length)b.mo.map(p=>({isMoon:true,n:p.userData.name,g:p.children[0],grp:p,parent:b,ud:p.userData,get r(){return this.g.scale.x;}})).sort((x,y)=>x.n.localeCompare(y.n,'ru')).forEach(t=>targets.push(t));});
+let ci=0,spI=1,tm=0,mt=0,last=performance.now(),th=.4,ph=1.3,dist=ov,dd=ov,cur=bodies[0];
+const wv=new TH.Vector3();
+const wpos=b=>{if(b.isMoon){b.g.updateWorldMatrix(true,false);return b.g.getWorldPosition(wv);}return b.g.position;};
+function objSpin(b){if(!b||b.isRoot)return 0;if(b.isMoon)return b.grp?b.grp.rotation.y:0;if(b.isSun)return b.g.rotation.y;return b.m?b.m.rotation.y:0;}
+function objTiltQ(b){if(!b||b.isRoot||b.isSun||b.isMoon)return null;const d=b.tilt;if(d==null||d===0)return null;return new TH.Quaternion().setFromAxisAngle(ZA,d*PI/180);}
+const tgv=new TH.Vector3(),off=new TH.Vector3(),camOff=new TH.Vector3(),pt=new Map(),el=renderer.domElement;
+const qId=new TH.Quaternion(),appliedQ=new TH.Quaternion();
+const cl=v=>Math.min(real?2e7:900,Math.max(cur.isMoon?cur.r*1.5:cur.r*1.6+0.5,v));
+let pd=0;
+const pinch=()=>{if(pt.size<2)return 0;const[a,b]=[...pt.values()];return Math.hypot(a[0]-b[0],a[1]-b[1]);};
+el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);pt.set(e.pointerId,[e.clientX,e.clientY]);pd=pinch();});
+el.addEventListener('pointermove',e=>{const o=pt.get(e.pointerId);if(!o)return;if(pt.size==1){th-=(e.clientX-o[0])*.006;ph=Math.min(3,Math.max(.15,ph-(e.clientY-o[1])*.006));}pt.set(e.pointerId,[e.clientX,e.clientY]);if(pt.size==2){const d=pinch();if(pd&&d)dd=cl(dd*pd/d);pd=d;}});
+['pointerup','pointercancel'].forEach(t=>el.addEventListener(t,e=>{pt.delete(e.pointerId);pd=pinch();}));
+el.addEventListener('wheel',e=>{dd=cl(dd*(1+Math.sign(e.deltaY)*.1));},{passive:true});
+window.addEventListener('resize',()=>{C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+function place(){for(const b of bodies){if(!b.a&&b.a!==0)continue;if(b.isRoot||b.isSun)continue;const M=b.ph+tm*0.0157/b.T,e=b.ecc||0;let E=M;for(let i=0;i<5;i++)E=M+e*Math.sin(E);b.E=E;let x=b.a*(Math.cos(E)-e),y=0,z=-b.a*Math.sqrt(Math.max(0,1-e*e))*Math.sin(E);const inc=b.incRad||0;if(inc){const cy=y*Math.cos(inc)-z*Math.sin(inc),cz=y*Math.sin(inc)+z*Math.cos(inc);y=cy;z=cz;}b.g.position.set(x,y,z);}}
+const LL=new TH.Line(new TH.BufferGeometry(),new TH.LineBasicMaterial({transparent:true,depthWrite:false})),LLbuf=new Float32Array(3*2400);
+LL.geometry.setAttribute('position',new TH.BufferAttribute(LLbuf,3));LL.renderOrder=-1;LL.visible=false;LL.frustumCulled=false;S.add(LL);
+let llFor=null;
+function updateLocalOrbit(){if(!orbitsVisible){if(llFor){llFor.ln.visible=false;llFor=null;}LL.visible=false;return;}const fb=real?(cur.isMoon?cur.parent:cur):null,ok=!!(fb&&fb.ln&&fb.au);if(llFor&&(llFor!==fb||!ok)){llFor.ln.visible=orbitsVisible;llFor=null;LL.visible=false;}if(!ok)return;if(llFor!==fb){llFor=fb;LL.material.color.copy(fb.ln.material.color);LL.material.opacity=fb.ln.material.opacity;LL.visible=true;}fb.ln.visible=false;const e=fb.ecc||0,a=fb.a,bb=a*Math.sqrt(1-e*e),inc=fb.incRad||0,si=Math.sin(inc),ci=Math.cos(inc),E0=fb.E;const P=E=>{const sE=Math.sin(E);return[a*(Math.cos(E)-e),bb*sE*si,-bb*sE*ci];};const p0=P(E0),dEdS=1/(a*Math.sqrt(1-e*e*Math.cos(E0)*Math.cos(E0))),offs=[];for(let s=Math.max(dist*.04,1e-4);;s*=1.08){const dE=s*dEdS;if(dE>=PI||offs.length>1100){offs.push(PI);break;}offs.push(dE);}let k=0;const put=E=>{const q=P(E);LLbuf[k++]=q[0]-p0[0];LLbuf[k++]=q[1]-p0[1];LLbuf[k++]=q[2]-p0[2];};for(let i=offs.length-1;i>=0;i--)put(E0-offs[i]);put(E0);for(let i=0;i<offs.length;i++)put(E0+offs[i]);LL.geometry.setDrawRange(0,k/3);LL.geometry.attributes.position.needsUpdate=true;LL.position.set(p0[0],p0[1],p0[2]);}
+const setPl=(b,f)=>{if(b.axes){b.m.scale.set(f*b.axes[0],f*b.axes[1],f*b.axes[2]);return;}const q=b.flat||0,a=f/Math.cbrt(1-q);b.m.scale.set(a,a*(1-q),a);};
+function sunLightSetup(base){if(real){sunLight.decay=0;sunLight.distance=0;sunLight.userData.fm=1;sunLight.intensity=base;return;}const ds=bodies.filter(b=>b.au),me=ds.find(b=>b.n==='Меркурий'),d=b=>real?b.au*AU_TO_UNITS:b.a0,dFar=Math.max(...ds.map(b=>d(b)*(1+b.ecc))),dRef=d(me),D=(dFar-.1*dRef)/.9;sunLight.decay=1;sunLight.distance=D;sunLight.userData.fm=1-dRef/D;sunLight.intensity=base/sunLight.userData.fm;}
+function apply(){let sunScale;if(real){sunScale=SUN_REAL_KM/KM_PER_UNIT;sunLightSetup(LIGHT_BASE_SUN*LIGHT_MUL_REAL);sunLight.castShadow=false;ambLight.intensity=LIGHT_BASE_AMB*LIGHT_MUL_REAL;}else{sunScale=8;sunLightSetup(2.6*SIM_LIGHT_MUL);sunLight.castShadow=true;ambLight.intensity=0.40*SIM_LIGHT_MUL;}sunBaseScale=sunScale;sunM.scale.setScalar(sunScale);if(real){glow.scale.set(sunScale*12,sunScale*12,1);gl2.scale.set(sunScale*35,sunScale*35,1);gl3.scale.set(sunScale*70,sunScale*70,1);gl4.scale.set(sunScale*140,sunScale*140,1);gl5.scale.set(sunScale*280,sunScale*280,1);glow.material.opacity=1.0;gl2.material.opacity=0.95;gl3.material.opacity=0.55;gl4.material.opacity=0.32;gl5.material.opacity=0.18;}else{glow.scale.set(sunScale*7,sunScale*7,1);gl2.scale.set(sunScale*21,sunScale*21,1);gl3.scale.set(sunScale*45,sunScale*45,1);gl4.scale.set(sunScale*90,sunScale*90,1);gl5.scale.set(sunScale*160,sunScale*160,1);glow.material.opacity=0.9;gl2.material.opacity=0.55;gl3.material.opacity=0.30;gl4.material.opacity=0.18;gl5.material.opacity=0.10;}glFar.scale.set(sunScale*30,sunScale*30,1);glFar.material.opacity=0.4;
+for(const b of bodies){if(b.isRoot||b.isSun)continue;b.a=real?b.au*AU_TO_UNITS:b.baseA0;const e=b.ecc||0;const segs=real?4096:512;const pts=[];for(let i=0;i<=segs;i++){const M=i/segs*2*PI;let E=M;for(let k=0;k<5;k++)E=M+e*Math.sin(E);pts.push(new TH.Vector3(b.a*(Math.cos(E)-e),0,b.a*Math.sqrt(Math.max(0,1-e*e))*Math.sin(E)));}b.ln.geometry.dispose();b.ln.geometry=new TH.BufferGeometry().setFromPoints(pts);b.ln.scale.set(1,1,1);b.ln.material.depthWrite=false;b.ln.renderOrder=-1;b.ln.material.opacity=real?0.22:0.32;if(real){const f=b.kmR/KM_PER_UNIT;setPl(b,f);if(b.atm)b.atm.scale.setScalar(f);if(b.cloudsMesh)b.cloudsMesh.scale.setScalar(f*1.006);if(b.vatm)b.vatm.scale.setScalar(f*1.015);if(b.ringMesh)b.ringMesh.scale.setScalar(f);b.mo.forEach(p=>{const ud=p.userData;const dist=(ud.mdist||384400)/KM_PER_UNIT;p.children[0].scale.setScalar((ud.mkm||1737)/KM_PER_UNIT);p.children[0].position.x=dist;if(ud.orbit){const pts=[];for(let i=0;i<=128;i++){const t=i/128*2*PI;pts.push(new TH.Vector3(Math.cos(t)*dist,0,Math.sin(t)*dist));}ud.orbit.geometry.dispose();ud.orbit.geometry=new TH.BufferGeometry().setFromPoints(pts);}});b.r=f;}else{setPl(b,b.baseR0);if(b.atm)b.atm.scale.setScalar(b.baseR0);if(b.cloudsMesh)b.cloudsMesh.scale.setScalar(b.baseR0*1.012);if(b.vatm)b.vatm.scale.setScalar(b.baseR0*1.02);if(b.ringMesh)b.ringMesh.scale.setScalar(b.baseR0);b.mo.forEach(p=>{const ud=p.userData;p.children[0].scale.setScalar(ud.mr);p.children[0].position.x=ud.d;if(ud.orbit){const pts=[];for(let i=0;i<=128;i++){const t=i/128*2*PI;pts.push(new TH.Vector3(Math.cos(t)*ud.d,0,Math.sin(t)*ud.d));}ud.orbit.geometry.dispose();ud.orbit.geometry=new TH.BufferGeometry().setFromPoints(pts);}});b.r=b.baseR0;}}
+bodies[0].d=real?AU_TO_UNITS*2.5:ov;bodies[0].r=real?sunScale:8;bodies[1].r=real?sunScale:8;fill();}
+const labels=[];
+function clearLabels(){labels.forEach(l=>l.el.remove());labels.length=0;}
+function makeLabel(text,isMoon){const el=document.createElement('div');el.className='label'+(isMoon?' moon':'');el.textContent=text;document.body.appendChild(el);return el;}
+function updateLabels(){const v=new TH.Vector3();labels.forEach(l=>{if(!l.obj)return;if(l.isMoon&&!moonLabelsVisible){l.el.classList.remove('show');return;}l.obj.getWorldPosition(v);v.project(C);const x=(v.x*.5+.5)*innerWidth,y=(-v.y*.5+.5)*innerHeight;if(v.z>1||!isFinite(x)||!isFinite(y)||x<-24||x>innerWidth+24||y<-12||y>innerHeight+12)l.el.classList.remove('show');else{l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.classList.add('show');}});}
+let infoCollapsed=true;
+function showInfo(b){const el=$('#info');if(!infoPanelVisible){el.classList.remove('show');return;}if(b.isMoon){el.innerHTML=`<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body"><p>Спутник планеты: ${b.parent.n}</p><div class="row"><span class="k">Радиус</span><span>${b.ud.mkm.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Расстояние до планеты</span><span>${b.ud.mdist.toLocaleString('ru')} км</span></div></div>`;el.classList.toggle('collapsed',infoCollapsed);el.classList.add('show');el.querySelector('.info-head').onclick=()=>{infoCollapsed=!infoCollapsed;el.classList.toggle('collapsed',infoCollapsed);};return;}if(b.isRoot){el.classList.remove('show');return;}let body='';if(b.isSun){body=`<p>${b.info||''}</p><div class="row"><span class="k">Радиус</span><span>696 340 км</span></div><div class="row"><span class="k">Масса</span><span>1,989×10³⁰ кг</span></div><div class="row"><span class="k">Темп. поверхности</span><span>≈ 5500 °C</span></div>`;}else{body=`<p>${b.info||''}</p><div class="row"><span class="k">Радиус</span><span>${b.kmR.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Орбита</span><span>${b.au} а.е.</span></div><div class="row"><span class="k">Период</span><span>${b.T} лет</span></div><div class="row"><span class="k">Эксцентриситет</span><span>${b.ecc}</span></div><div class="row"><span class="k">Свет Солнца</span><span>${(v=>v>=100?Math.round(v):v>=1?v.toFixed(1):v.toPrecision(2))(100/(b.au*b.au))}% от земного</span></div><div class="row"><span class="k">Наклон оси</span><span>${b.tilt==null?'—':b.tilt+'°'}</span></div>`;if(b.mo&&b.mo.length)body+=`<div class="row"><span class="k">Спутники</span><span>${b.mo.map(p=>p.userData.name).join(', ')}</span></div>`;}el.innerHTML=`<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body">${body}</div>`;el.classList.toggle('collapsed',infoCollapsed);el.classList.add('show');el.querySelector('.info-head').onclick=()=>{infoCollapsed=!infoCollapsed;el.classList.toggle('collapsed',infoCollapsed);};}
+const bar=$('#bar');
+const fpsEl=document.createElement('div');fpsEl.id='fps';fpsEl.textContent='— FPS';document.body.append(fpsEl);
+let _fFrames=0,_fAccum=0;
+const setBtn=document.createElement('button');setBtn.id='setBtn';setBtn.title='Настройки';
+setBtn.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+bar.append(setBtn);
+const setMenu=document.createElement('div');setMenu.id='settingsMenu';
+setMenu.innerHTML='<div class="section"><div class="section-label">Скорость</div><div class="seg" id="speedSeg"><button data-sp="0">Пауза</button><button data-sp="1" class="on">x1</button><button data-sp="2">x16</button><button data-sp="3">x256</button></div></div>'
++'<div class="section"><div class="section-label">Режим</div><div class="toggle" id="modeToggle"><div class="thumb"></div><div class="opt" data-mode="0">Упрощённый</div><div class="opt" data-mode="1">Реализм</div></div></div>'
++'<div class="section"><div class="section-label">Камера</div><div class="toggle real" id="camToggle"><div class="thumb"></div><div class="opt" data-cam="0">Мировая</div><div class="opt" data-cam="1">Планетарная</div></div></div>'
++'<div class="divider"></div>'
++'<div class="section"><div class="row"><span>Линии орбит</span><label class="sw"><input type="checkbox" id="orbitsChk" checked><span></span></label></div><div class="row"><span>Подписи спутников</span><label class="sw"><input type="checkbox" id="moonLabelsChk" checked><span></span></label></div><div class="row"><span>Панель информации</span><label class="sw"><input type="checkbox" id="infoChk" checked><span></span></label></div></div>';
+document.body.append(setMenu);
+const toggleMenu=()=>{setMenu.classList.toggle('open');setBtn.classList.toggle('open');};
+setBtn.onclick=e=>{e.stopPropagation();toggleMenu();drop.classList.remove('open');};
+document.addEventListener('click',e=>{if(setMenu.classList.contains('open')&&!setMenu.contains(e.target)&&!setBtn.contains(e.target)){setMenu.classList.remove('open');setBtn.classList.remove('open');}});
+setMenu.querySelectorAll('#speedSeg button').forEach(btn=>{btn.onclick=()=>{spI=parseInt(btn.dataset.sp,10);setMenu.querySelectorAll('#speedSeg button').forEach(b=>b.classList.toggle('on',b===btn));};});
+const modeToggle=setMenu.querySelector('#modeToggle');modeToggle.classList.toggle('real',!!real);
+modeToggle.querySelectorAll('.opt').forEach(opt=>{opt.onclick=()=>{const m=parseInt(opt.dataset.mode,10);if(!!m===!!real)return;real=m;modeToggle.classList.toggle('real',!!real);apply();pick(ci);};});
+const camToggle=setMenu.querySelector('#camToggle');camToggle.classList.toggle('real',camMode===1);
+camToggle.querySelectorAll('.opt').forEach(opt=>{opt.onclick=()=>{const m=parseInt(opt.dataset.cam,10);if(m===camMode)return;camMode=m;camToggle.classList.toggle('real',camMode===1);};});
+setMenu.querySelector('#orbitsChk').addEventListener('change',e=>{orbitsVisible=e.target.checked;pick(ci);});
+setMenu.querySelector('#moonLabelsChk').addEventListener('change',e=>{moonLabelsVisible=e.target.checked;updateLabels();});
+setMenu.querySelector('#infoChk').addEventListener('change',e=>{infoPanelVisible=e.target.checked;if(infoPanelVisible)showInfo(cur);else $('#info').classList.remove('show');});
+const drop=document.createElement('div');drop.className='dd';
+const dropBtn=document.createElement('button');dropBtn.className='dd-btn';
+const dropList=document.createElement('div');dropList.className='dd-list';
+function pick(i){const b=targets[i];ci=i;off.copy(tgv).sub(wpos(b));cur=b;spinRef=objSpin(b);const _q=objTiltQ(b);if(_q)curTiltQ.copy(_q);else curTiltQ.identity();dd=b.d||(b.isSun?(real?sunBaseScale*3.5:100):b.isMoon?(real?b.r*8:b.r*7+6):b.r*(real?5:7)+(real?Math.min(6,b.r*8):6));dropBtn.innerHTML=b.n+' <span class="tri">▲</span>';dropList.querySelectorAll('.dd-item').forEach((el,j)=>el.classList.toggle('on',j===i));clearLabels();bodies.forEach(bb=>{if(bb.mo)bb.mo.forEach(p=>{if(p.userData.orbit)p.userData.orbit.visible=false;});});const pb=b.isMoon?b.parent:b;if(pb.mo&&pb.mo.length){pb.mo.forEach(p=>{const ml=makeLabel(p.userData.name,true);labels.push({el:ml,obj:p.children[0],isMoon:true});if(p.userData.orbit)p.userData.orbit.visible=orbitsVisible;});}venCtl.classList.toggle('show',!b.isMoon&&b.k==='ven');showInfo(b);}
+dropBtn.innerHTML='Обзор <span class="tri">▲</span>';
+const hd=t=>{const e=document.createElement('div');e.className='dd-head';e.textContent=t;return e;};
+const fp=bodies.find(b=>!b.isRoot&&!b.isSun&&!b.dw),fd=bodies.find(b=>b.dw);
+targets.forEach((b,i)=>{if(b===fp)dropList.append(hd('Планеты'));if(b===fd)dropList.append(hd('Карликовые планеты'));const item=document.createElement('button');item.className='dd-item'+(b.isMoon?' moon':'');if(b.isMoon){const bl=document.createElement('span');bl.className='bl';bl.textContent='•';const it=document.createElement('i');it.textContent=b.n;item.append(bl,it);}else item.textContent=b.n;item.onclick=(e)=>{e.stopPropagation();pick(i);drop.classList.remove('open');};dropList.append(item);});
+dropBtn.onclick=e=>{e.stopPropagation();drop.classList.toggle('open');if(drop.classList.contains('open')){setMenu.classList.remove('open');setBtn.classList.remove('open');const on=dropList.querySelector('.dd-item.on');if(on)on.scrollIntoView({block:'center'});}};
+drop.append(dropBtn,dropList);bar.append(drop);
+document.addEventListener('click',()=>drop.classList.remove('open'));
+{const fsBtn=document.createElement('button');fsBtn.id='fsBtn';fsBtn.title='Полноэкранный режим';
+const fsEnter=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
+const fsExit=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`;
+fsBtn.innerHTML=fsEnter;fsBtn.style.marginLeft='auto';
+fsBtn.onclick=()=>{if(!document.fullscreenElement){document.documentElement.requestFullscreen?.()||document.documentElement.webkitRequestFullscreen?.();}else{document.exitFullscreen?.()||document.webkitExitFullscreen?.();}};
+document.addEventListener('fullscreenchange',()=>{fsBtn.innerHTML=document.fullscreenElement?fsExit:fsEnter;});
+document.addEventListener('webkitfullscreenchange',()=>{fsBtn.innerHTML=document.fullscreenElement?fsExit:fsEnter;});
+bar.append(fsBtn);}
+apply();pick(0);
+console.log('[phase] ready');
+function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000,.05);last=now;_fFrames++;_fAccum+=dt;if(_fAccum>=0.5){fpsEl.textContent=Math.round(_fFrames/_fAccum)+' FPS';_fFrames=0;_fAccum=0;}const s=SPEEDS[spI],q=Math.sqrt(s);tm+=dt*s;mt+=dt*q;sunM.rotation.y+=dt*.004*q;const M=SUN_GLOW_BASE;if(real){glow.material.opacity=Math.min(1,(0.95+0.05*Math.sin(now/600))*M);gl2.material.opacity=Math.min(1,(0.88+0.05*Math.sin(now/700))*M);gl3.material.opacity=Math.min(1,(0.50+0.05*Math.sin(now/800))*M);gl4.material.opacity=Math.min(1,(0.28+0.04*Math.sin(now/900))*M);gl5.material.opacity=Math.min(1,(0.15+0.03*Math.sin(now/1100))*M);}else{glow.material.opacity=Math.min(1,(0.85+0.10*Math.sin(now/600))*M);gl2.material.opacity=Math.min(1,0.55*M);gl3.material.opacity=Math.min(1,(0.28+0.04*Math.sin(now/900))*M);gl4.material.opacity=Math.min(1,(0.16+0.03*Math.sin(now/1000))*M);gl5.material.opacity=Math.min(1,(0.09+0.02*Math.sin(now/1200))*M);}{const distSun=C.position.distanceTo(sunM.position);const minPx=3;const minAng=minPx*(C.fov*PI/180)/innerHeight;const sunRvis=Math.max(sunBaseScale,distSun*minAng*0.5);sunM.scale.setScalar(sunRvis);const refDist=real?AU_TO_UNITS*3:40;const grow=1+Math.min(distSun/refDist,2);const glFarScale=Math.max(sunM.scale.x*1.5,distSun*0.04*grow);glFar.scale.set(glFarScale,glFarScale,1);const bBase=real?0.38:0.26;const bMul=1+Math.min(distSun/refDist,2);const pulse=(real?0.06:0.04)*Math.sin(now/700);glFar.material.opacity=Math.max(0,Math.min(1,(bBase*bMul+pulse)*M));}place();for(const b of bodies){if(b.ln)b.ln.visible=orbitsVisible;}updateLocalOrbit();for(const b of bodies){if(b.isRoot||b.isSun)continue;b.m.rotation.y+=dt*q*(b.k in SPIN?SPIN[b.k]:b.T>5?.3:.14);if(b.cloudsMesh)b.cloudsMesh.rotation.y=b.m.rotation.y*1.06+.7;if(b.vatm)b.vatm.rotation.y=b.m.rotation.y*1.15+.3;for(const p of b.mo)p.rotation.y=p.userData.ph+mt*p.userData.sp*0.1;if(b.ringMesh)b.ringMesh.rotation.z+=dt*q*0.08;}belts.forEach((bt,k)=>{bt.rotation.y=tm*bt.userData.w;bms[k].rotation.y=bt.rotation.y;});kbs.forEach(k=>{k.rotation.y=tm*k.userData.w;});{const camAU=C.position.length()/AU_TO_UNITS;belts.forEach((bt,k)=>{if(real){const dAU=Math.abs(camAU-BC[k].c);const fade=Math.max(0.05,Math.min(1,1-(dAU-3)/17));bms[k].material.opacity=0.36*fade;}else{bms[k].material.opacity=0.36;}});kbs.forEach((kb,k)=>{if(real){const dAU=Math.abs(camAU-KC[k].c);const fade=Math.max(0.05,Math.min(1,1-(dAU-3)/17));kb.material.opacity=0.48*fade;}else{kb.material.opacity=0.48;}});}off.multiplyScalar(Math.exp(-dt*4));tgv.copy(wpos(cur)).add(off);dist+=(dd-dist)*Math.min(1,dt*6);smoothTiltQ.slerp(curTiltQ,Math.min(1,dt*4));camMix+=(camMode-camMix)*Math.min(1,dt*3);if(camMix>=0.999)appliedQ.copy(smoothTiltQ);else if(camMix<=0.001)appliedQ.copy(qId);else{appliedQ.copy(qId).slerp(smoothTiltQ,camMix);}const thSpin=th+(objSpin(cur)-spinRef)*camMix;const sp0=Math.sin(ph),cp0=Math.cos(ph);camOff.set(dist*sp0*Math.sin(thSpin),dist*cp0,dist*sp0*Math.cos(thSpin));camOff.applyQuaternion(appliedQ);C.position.set(tgv.x+camOff.x,tgv.y+camOff.y,tgv.z+camOff.z);C.up.set(0,1,0).applyQuaternion(appliedQ);C.lookAt(tgv);C.near=Math.max(dist*.004,.0005);C.far=1e8;C.updateProjectionMatrix();sky.scale.setScalar(Math.max(1,dist/1000));sky.position.copy(C.position);glow.position.copy(sunM.position);gl2.position.copy(sunM.position);gl3.position.copy(sunM.position);gl4.position.copy(sunM.position);gl5.position.copy(sunM.position);glFar.position.copy(sunM.position);C.updateMatrixWorld();C.matrixWorldInverse.copy(C.matrixWorld).invert();earthU.uSunV.value.copy(earthB.g.position).negate().normalize().transformDirection(C.matrixWorldInverse);if(skySphere){let bright=SIM_SKY_BRIGHT;if(real){const camR=C.position.length()/AU_TO_UNITS;const t=Math.min(camR/SKY_REF,1);bright=(SKY_SUN+(1-SKY_SUN)*t)*SKY_DIM_MUL;}skySphere.userData.uni.uBright.value=Math.max(0,bright);skySphere.userData.uni.uLinear.value=real?1:0;}let sOf=null;{if(real){sOf=pos=>Math.min(1e4,Math.pow(1/Math.max(.02,pos/AU_TO_UNITS),0.5));}if(real||wasP){const sc=(mat,s)=>{if(!mat)return;const u=mat.userData,c0=u.c0||(u.c0=mat.color.clone());mat.color.copy(c0).multiplyScalar(s);if(!mat.emissiveMap){if(u.e0===undefined)u.e0=mat.emissiveIntensity;mat.emissiveIntensity=u.e0*s;}};for(const b of bodies){if(!b.m)continue;const s=real?sOf(b.g.position.length()):1;sc(b.m.material,s);if(b.cloudsMesh)sc(b.cloudsMesh.material,s);if(b.vatm)sc(b.vatm.material,s);if(b.ringMesh)sc(b.ringMesh.material,s);for(const p of b.mo)sc(p.children[0].material,s);}belts.forEach((bt,k)=>sc(bt.material,real?sOf(BC[k].c*AU_TO_UNITS):1));wasP=real;}}for(const b of bodies){if(!b.atm)continue;const U=b.atm.material.uniforms;U.uI.value=b.atm.userData.I0*(real?sOf(b.g.position.length()):Math.max(0,1-b.g.position.length()/sunLight.distance)/sunLight.userData.fm);const ta=-b.tilt*PI/180;U.uC.value.copy(C.position).sub(b.g.position).divideScalar(b.atm.scale.x).applyAxisAngle(ZA,ta);U.uS.value.copy(b.g.position).negate().normalize().applyAxisAngle(ZA,ta);}{const R=satB.ringU;R.uSun.value.copy(satB.g.position).negate();R.uA.value=satB.m.scale.x;R.uCc.value=satB.m.scale.y;R.uS.value=satB.ringMesh.scale.x;}renderer.render(S,C);updateLabels();}
+await prog(100,'Готово');ld.classList.add('done');setTimeout(()=>ld.remove(),800);requestAnimationFrame(loop);
+}catch(e){showError('[fatal] '+(e&&e.message||e));lt.textContent='Ошибка загрузки: '+(e&&e.message||e);console.error(e);}
 })();
 </script>
 </body>
