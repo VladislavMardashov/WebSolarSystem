@@ -79,6 +79,22 @@ button.mode{background:rgba(60,120,220,.35)}
 #venAtmCtl input[type=range]{width:130px;accent-color:var(--acc);cursor:pointer}
 #venAtmCtl .v{font-family:ui-monospace,monospace;font-size:10.5px;color:#e9edf5;min-width:40px;text-align:right;opacity:.9}
 
+#nrmCtl{
+  position:fixed;right:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:25;
+  background:rgba(12,16,28,.92);border:1px solid rgba(255,255,255,.18);border-radius:10px;
+  backdrop-filter:blur(12px);box-shadow:0 6px 22px rgba(0,0,0,.5);
+  padding:10px 12px;display:none;flex-direction:column;gap:7px;font-size:11px;user-select:none;
+  min-width:250px;
+}
+#nrmCtl.show{display:flex}
+#nrmCtl .title{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;opacity:.55;padding:0 2px 4px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:2px}
+#nrmCtl .row{display:flex;align-items:center;gap:8px;justify-content:space-between}
+#nrmCtl label{opacity:.75;font-size:11px;flex:none;min-width:72px}
+#nrmCtl input[type=range]{flex:1;width:auto;accent-color:var(--acc);cursor:pointer;min-width:80px}
+#nrmCtl .v{font-family:ui-monospace,monospace;font-size:10.5px;color:#e9edf5;min-width:36px;text-align:right;opacity:.9}
+#nrmCtl .reset{margin-top:2px;padding:6px 10px;font-size:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--fg);border-radius:6px;cursor:pointer;width:100%;font:inherit}
+#nrmCtl .reset:hover{background:rgba(255,255,255,.12)}
+
 /* ============ Меню настроек ============ */
 #settingsMenu{
   position:fixed;left:8px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:35;
@@ -480,6 +496,16 @@ let orbitsVisible = true;
 let moonLabelsVisible = true;
 /* Видимость инфопанели выбранного объекта. */
 let infoPanelVisible = true;
+/* Опорный угол вращения выбранного объекта — камера следует за его верчением. */
+let spinRef = 0;
+/* Целевой кватернион наклона оси текущей цели. */
+let curTiltQ = new TH.Quaternion();
+/* Сглаженный кватернион наклона (подтягивается к curTiltQ). */
+let smoothTiltQ = new TH.Quaternion();
+/* Режим камеры: 0 = мировая (без привязки к спину и наклону), 1 = планетарная. */
+let camMode = 1;
+/* Сглаженное значение режима камеры для плавного перехода. */
+let camMix = 1;
 
 (async () => {
   const ld = $('#load'), lb = ld.querySelector('i'), lt = ld.querySelector('.tx');
@@ -569,20 +595,25 @@ let infoPanelVisible = true;
       }
     }
 
+    /* Дефолты параметров нормал-мап (применяются ко всем, у кого они есть). */
     const nrmGlobal = { opacity: 0.5, depth: 1.0, gamma: 1.0, swapRG: false, cropX: 5, litFrom: -0.70, litTo: 0.70 };
-    const nrmU = {
+    /* Фабрика юниформов — каждому телу с нормал-мапой свой набор (независимая настройка). */
+    const makeNrmU = () => ({
       uOpacity: { value: nrmGlobal.opacity }, uDepth: { value: nrmGlobal.depth },
       uGamma: { value: nrmGlobal.gamma }, uSwapRG: { value: nrmGlobal.swapRG ? 1 : 0 },
       uFrom: { value: nrmGlobal.litFrom }, uTo: { value: nrmGlobal.litTo }
-    };
+    });
 
     if (normalTextures.mars_normal && nrmGlobal.cropX > 0) {
       normalTextures.mars_normal = cropTextureX(normalTextures.mars_normal, nrmGlobal.cropX);
     }
 
-    const LIGHT_MUL_REAL = 2.0;
+    /* Реализм: глобальный множитель яркости света. */
+    const LIGHT_MUL_REAL = 1.6;
+    /* Реализм: базовая интенсивность Солнца. */
     const LIGHT_BASE_SUN = 0.5;
-    const LIGHT_BASE_AMB = 0.35;
+    /* Реализм: базовая интенсивность ambient (снижено на 40% от 0.35). */
+    const LIGHT_BASE_AMB = 0.21;
 
     const G = (a, b) => {
       const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -754,14 +785,14 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
       mat.needsUpdate = true;
     }
 
-    function applyNormalPatches(mat) {
+    function applyNormalPatches(mat, u) {
       chainPatch(mat, function (sh) {
-        sh.uniforms.uNormLitFrom = nrmU.uFrom;
-        sh.uniforms.uNormLitTo   = nrmU.uTo;
-        sh.uniforms.uNrmOpacity  = nrmU.uOpacity;
-        sh.uniforms.uNrmGamma    = nrmU.uGamma;
-        sh.uniforms.uNrmDepth    = nrmU.uDepth;
-        sh.uniforms.uNrmSwapRG   = nrmU.uSwapRG;
+        sh.uniforms.uNormLitFrom = u.uFrom;
+        sh.uniforms.uNormLitTo   = u.uTo;
+        sh.uniforms.uNrmOpacity  = u.uOpacity;
+        sh.uniforms.uNrmGamma    = u.uGamma;
+        sh.uniforms.uNrmDepth    = u.uDepth;
+        sh.uniforms.uNrmSwapRG   = u.uSwapRG;
 
         sh.fragmentShader =
           'uniform float uNormLitFrom;\nuniform float uNormLitTo;\n' +
@@ -821,11 +852,13 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     DB.forEach(([n, a0, r0, Tp, tilt, k, tint, ms, ring, kmR, au, ecc, orbInc, info, dw]) => {
       const g = new TH.Group(), tg = new TH.Group();
       const matOpts = { map: tx[k], color: tint, roughness: 0.92, metalness: 0, emissive: 0x0a0a0a, emissiveIntensity: 0.08 };
-      const realNormalKey = k === 'earth' ? 'earth_normal' : k === 'moon' ? 'moon_normal' : k === 'mars' ? 'mars_normal' : null;
+      const realNormalKey = k === 'earth' ? 'earth_normal' : k === 'mars' ? 'mars_normal' : null;
       let hasNormal = false;
+      let myNrmU = null;
       if (realNormalKey && normalTextures[realNormalKey]) {
         matOpts.normalMap = normalTextures[realNormalKey];
         matOpts.normalScale = k === 'mars' ? new TH.Vector2(-1, 1) : new TH.Vector2(1, 1);
+        myNrmU = makeNrmU();
         hasNormal = true;
       }
       const m = new TH.Mesh(new TH.SphereGeometry(1, 48, 32), new TH.MeshStandardMaterial(matOpts));
@@ -836,7 +869,16 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
       if (k === 'earth') {
         m.material.color.setRGB(1.0, 1.0, 0.98);
         if (tx.cl) {
-          cloudsMesh = new TH.Mesh(new TH.SphereGeometry(1, 48, 32), new TH.MeshStandardMaterial({ map: tx.cl, transparent: true, depthWrite: false, roughness: 1, metalness: 0, opacity: 0.58, side: TH.FrontSide }));
+          cloudsMesh = new TH.Mesh(new TH.SphereGeometry(1, 48, 32), new TH.MeshStandardMaterial({
+            color: 0xffffff,
+            alphaMap: tx.cl,
+            transparent: true,
+            depthWrite: false,
+            roughness: 1,
+            metalness: 0,
+            opacity: 0.95,
+            side: TH.FrontSide
+          }));
           cloudsMesh.renderOrder = 1; tg.add(cloudsMesh);
         }
         const em = m.material;
@@ -860,7 +902,7 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
         vatm.renderOrder = 1; tg.add(vatm);
       }
 
-      if (hasNormal) applyNormalPatches(m.material);
+      if (hasNormal) applyNormalPatches(m.material, myNrmU);
 
       let atm = null;
       { const ap = ATM[k]; if (ap) { atm = makeAtm(ap, ({ jup: .06487, sat: .09796 })[k]); atm.renderOrder = 3; atm.userData.I0 = ap.i; atm.rotation.z = tilt * PI / 180; g.add(atm); } }
@@ -882,9 +924,16 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
       }
       const mo = ms.map(([d, mr, sp, col, mkm, mdist, mname]) => {
         const pv = new TH.Group();
-        const mm = new TH.Mesh(ROCK[mname] ? ROCK[mname]() : new TH.SphereGeometry(1, 24, 16), new TH.MeshStandardMaterial({
-          map: tx[MTEX[mname] || 'moon'], color: col, roughness: 0.95, metalness: 0, emissive: 0x050505, emissiveIntensity: 0.05
-        }));
+        const moonNrmKey = mname === 'Луна' ? 'moon_normal' : null;
+        const mmOpts = { map: tx[MTEX[mname] || 'moon'], color: col, roughness: 0.95, metalness: 0, emissive: 0x050505, emissiveIntensity: 0.05 };
+        let moonNrmU = null;
+        if (moonNrmKey && normalTextures[moonNrmKey]) {
+          mmOpts.normalMap = normalTextures[moonNrmKey];
+          mmOpts.normalScale = new TH.Vector2(1, 1);
+          moonNrmU = makeNrmU();
+        }
+        const mm = new TH.Mesh(ROCK[mname] ? ROCK[mname]() : new TH.SphereGeometry(1, 24, 16), new TH.MeshStandardMaterial(mmOpts));
+        if (moonNrmU) applyNormalPatches(mm.material, moonNrmU);
         mm.castShadow = true; mm.receiveShadow = true;
         if (mname === 'Луна') mm.rotation.y = PI;
         pv.rotation.order = 'ZXY';
@@ -894,7 +943,7 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
         const mPts = []; for (let i = 0; i <= 128; i++) { const t = i / 128 * 2 * PI; mPts.push(new TH.Vector3(Math.cos(t) * d, 0, Math.sin(t) * d)); }
         const mLn = new TH.Line(new TH.BufferGeometry().setFromPoints(mPts), new TH.LineBasicMaterial({ color: 0x8899bb, transparent: true, opacity: 0.14, depthWrite: false }));
         mLn.visible = false; mLn.renderOrder = -2; pv.add(mLn);
-        pv.userData = { sp: mname === 'Тритон' ? Math.abs(sp) : sp, ph: rnd() * 6.28, d, mr, mkm: mkm || 1737, mdist: mdist || 384400, name: mname || 'Спутник', orbit: mLn };
+        pv.userData = { sp: mname === 'Тритон' ? Math.abs(sp) : sp, ph: rnd() * 6.28, d, mr, mkm: mkm || 1737, mdist: mdist || 384400, name: mname || 'Спутник', orbit: mLn, nrmU: moonNrmU };
         g.add(pv); return pv;
       });
       const pts = []; for (let i = 0; i <= 512; i++) { const t = i / 512 * 2 * PI; pts.push(new TH.Vector3(Math.cos(t), 0, Math.sin(t))); }
@@ -902,7 +951,7 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
       const incRad = (orbInc || 0) * PI / 180; if (dw) ln.material.color.set(0xa88f6e);
       ln.rotation.x = incRad;
       S.add(g, ln);
-      bodies.push({ n, g, ln, r: r0, r0, a: a0, a0, kmR, au, ecc: ecc || 0, orbInc: orbInc || 0, incRad, T: Tp, k, m, mo, ph: rnd() * 6.28, moonData: ms, ringMesh, atm, tg, baseA0: a0, baseR0: r0, info, tilt, dw, axes: AXS[k], cloudsMesh, vatm, flat: ({ jup: .06487, sat: .09796 })[k] || 0, ringU: rU, hasNormal });
+      bodies.push({ n, g, ln, r: r0, r0, a: a0, a0, kmR, au, ecc: ecc || 0, orbInc: orbInc || 0, incRad, T: Tp, k, m, mo, ph: rnd() * 6.28, moonData: ms, ringMesh, atm, tg, baseA0: a0, baseR0: r0, info, tilt, dw, axes: AXS[k], cloudsMesh, vatm, flat: ({ jup: .06487, sat: .09796 })[k] || 0, ringU: rU, hasNormal, nrmU: myNrmU });
     });
 
     const satB = bodies.find(b => b.k === 'sat'), earthB = bodies.find(b => b.k === 'earth'), venB = bodies.find(b => b.k === 'ven');
@@ -921,6 +970,59 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
       if (venB && venB.vatm) venB.vatm.material.opacity = (p / 100) * VEN_MAX_REAL;
     });
     ['pointerdown', 'click', 'touchstart'].forEach(ev => venSlider.addEventListener(ev, e => e.stopPropagation(), ev === 'touchstart' ? { passive: true } : false));
+
+    /* ============ Панель управления нормал-мапой Луны ============ */
+    const nrmCtl = document.createElement('div');
+    nrmCtl.id = 'nrmCtl';
+    nrmCtl.innerHTML =
+      '<div class="title">Нормал-мапа · Луна</div>' +
+      '<div class="row"><label>Рельеф</label><input type="range" id="nrmOpacity" min="0" max="100" step="5" value="50"><span class="v" id="nrmOpacityVal">0.50</span></div>' +
+      '<div class="row"><label>Глубина</label><input type="range" id="nrmDepth" min="0" max="300" step="10" value="100"><span class="v" id="nrmDepthVal">1.0</span></div>' +
+      '<div class="row"><label>Гамма</label><input type="range" id="nrmGamma" min="50" max="200" step="10" value="100"><span class="v" id="nrmGammaVal">1.0</span></div>' +
+      '<button class="reset" id="nrmReset">Сброс</button>';
+    document.body.append(nrmCtl);
+
+    const nrmOpacityEl = document.getElementById('nrmOpacity');
+    const nrmOpacityVal = document.getElementById('nrmOpacityVal');
+    const nrmDepthEl = document.getElementById('nrmDepth');
+    const nrmDepthVal = document.getElementById('nrmDepthVal');
+    const nrmGammaEl = document.getElementById('nrmGamma');
+    const nrmGammaVal = document.getElementById('nrmGammaVal');
+    let nrmTarget = null;
+
+    function syncNrmUI() {
+      if (!nrmTarget) return;
+      nrmOpacityEl.value = Math.round(nrmTarget.uOpacity.value * 100);
+      nrmOpacityVal.textContent = nrmTarget.uOpacity.value.toFixed(2);
+      nrmDepthEl.value = Math.round(nrmTarget.uDepth.value * 100);
+      nrmDepthVal.textContent = nrmTarget.uDepth.value.toFixed(1);
+      nrmGammaEl.value = Math.round(nrmTarget.uGamma.value * 100);
+      nrmGammaVal.textContent = nrmTarget.uGamma.value.toFixed(1);
+    }
+
+    nrmOpacityEl.addEventListener('input', () => {
+      const v = parseInt(nrmOpacityEl.value, 10) / 100;
+      nrmOpacityVal.textContent = v.toFixed(2);
+      if (nrmTarget) nrmTarget.uOpacity.value = v;
+    });
+    nrmDepthEl.addEventListener('input', () => {
+      const v = parseInt(nrmDepthEl.value, 10) / 100;
+      nrmDepthVal.textContent = v.toFixed(1);
+      if (nrmTarget) nrmTarget.uDepth.value = v;
+    });
+    nrmGammaEl.addEventListener('input', () => {
+      const v = parseInt(nrmGammaEl.value, 10) / 100;
+      nrmGammaVal.textContent = v.toFixed(1);
+      if (nrmTarget) nrmTarget.uGamma.value = v;
+    });
+    document.getElementById('nrmReset').addEventListener('click', () => {
+      if (!nrmTarget) return;
+      nrmTarget.uOpacity.value = nrmGlobal.opacity;
+      nrmTarget.uDepth.value = nrmGlobal.depth;
+      nrmTarget.uGamma.value = nrmGlobal.gamma;
+      syncNrmUI();
+    });
+    ['pointerdown', 'click', 'touchstart'].forEach(ev => nrmCtl.addEventListener(ev, e => e.stopPropagation(), ev === 'touchstart' ? { passive: true } : false));
 
     await prog(85, 'Пояса астероидов…');
     const BC = [
@@ -972,12 +1074,26 @@ gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,
     const targets = [];
     bodies.forEach(b => {
       targets.push(b);
-      if (b.mo && b.mo.length) b.mo.map(p => ({ isMoon: true, n: p.userData.name, g: p.children[0], parent: b, ud: p.userData, get r() { return this.g.scale.x; } })).sort((x, y) => x.n.localeCompare(y.n, 'ru')).forEach(t => targets.push(t));
+      if (b.mo && b.mo.length) b.mo.map(p => ({ isMoon: true, n: p.userData.name, g: p.children[0], grp: p, parent: b, ud: p.userData, get r() { return this.g.scale.x; } })).sort((x, y) => x.n.localeCompare(y.n, 'ru')).forEach(t => targets.push(t));
     });
     let ci = 0, spI = 1, tm = 0, mt = 0, last = performance.now(), th = .4, ph = 1.3, dist = ov, dd = ov, cur = bodies[0];
     const wv = new TH.Vector3();
     const wpos = b => { if (b.isMoon) { b.g.updateWorldMatrix(true, false); return b.g.getWorldPosition(wv); } return b.g.position; };
-    const tgv = new TH.Vector3(), off = new TH.Vector3(), pt = new Map(), el = renderer.domElement;
+    function objSpin(b) {
+      if (!b || b.isRoot) return 0;
+      if (b.isMoon) return b.grp ? b.grp.rotation.y : 0;
+      if (b.isSun) return b.g.rotation.y;
+      return b.m ? b.m.rotation.y : 0;
+    }
+    function objTiltQ(b) {
+      if (!b || b.isRoot || b.isSun || b.isMoon) return null;
+      const d = b.tilt;
+      if (d == null || d === 0) return null;
+      return new TH.Quaternion().setFromAxisAngle(ZA, d * PI / 180);
+    }
+    const tgv = new TH.Vector3(), off = new TH.Vector3(), camOff = new TH.Vector3(), pt = new Map(), el = renderer.domElement;
+    const qId = new TH.Quaternion();
+    const appliedQ = new TH.Quaternion();
     const cl = v => Math.min(real ? 2e7 : 900, Math.max(cur.isMoon ? cur.r * 1.5 : cur.r * 1.6 + 0.5, v));
     let pd = 0;
     const pinch = () => { if (pt.size < 2) return 0; const [a, b] = [...pt.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
@@ -1194,6 +1310,12 @@ fb.ln.visible = false;
         '<div class="opt" data-mode="0">Упрощённый</div>' +
         '<div class="opt" data-mode="1">Реализм</div>' +
       '</div></div>' +
+      '<div class="section"><div class="section-label">Камера</div>' +
+      '<div class="toggle real" id="camToggle">' +
+        '<div class="thumb"></div>' +
+        '<div class="opt" data-cam="0">Мировая</div>' +
+        '<div class="opt" data-cam="1">Планетарная</div>' +
+      '</div></div>' +
       '<div class="divider"></div>' +
       '<div class="section">' +
         '<div class="row"><span>Линии орбит</span><label class="sw"><input type="checkbox" id="orbitsChk" checked><span></span></label></div>' +
@@ -1232,6 +1354,17 @@ fb.ln.visible = false;
       };
     });
 
+    const camToggle = setMenu.querySelector('#camToggle');
+    camToggle.classList.toggle('real', camMode === 1);
+    camToggle.querySelectorAll('.opt').forEach(opt => {
+      opt.onclick = () => {
+        const m = parseInt(opt.dataset.cam, 10);
+        if (m === camMode) return;
+        camMode = m;
+        camToggle.classList.toggle('real', camMode === 1);
+      };
+    });
+
     setMenu.querySelector('#orbitsChk').addEventListener('change', e => {
       orbitsVisible = e.target.checked;
       pick(ci);
@@ -1253,6 +1386,9 @@ fb.ln.visible = false;
 
     function pick(i) {
       const b = targets[i]; ci = i; off.copy(tgv).sub(wpos(b)); cur = b;
+      spinRef = objSpin(b);
+      const _q = objTiltQ(b);
+      if (_q) curTiltQ.copy(_q); else curTiltQ.identity();
       dd = b.d || (b.isSun ? (real ? sunBaseScale * 3.5 : 100) : b.isMoon ? (real ? b.r * 8 : b.r * 7 + 6) : b.r * (real ? 5 : 7) + (real ? Math.min(6, b.r * 8) : 6));
       dropBtn.innerHTML = b.n + ' <span class="tri">▲</span>';
       dropList.querySelectorAll('.dd-item').forEach((el, j) => el.classList.toggle('on', j === i));
@@ -1263,6 +1399,10 @@ fb.ln.visible = false;
         pb.mo.forEach(p => { const ml = makeLabel(p.userData.name, true); labels.push({ el: ml, obj: p.children[0], isMoon: true }); if (p.userData.orbit) p.userData.orbit.visible = orbitsVisible; });
       }
       venCtl.classList.toggle('show', !b.isMoon && b.k === 'ven');
+      /* Панель нормал-мапы — только для Луны. */
+      nrmTarget = (b.isMoon && b.n === 'Луна' && b.ud && b.ud.nrmU) ? b.ud.nrmU : null;
+      if (nrmTarget) { syncNrmUI(); nrmCtl.classList.add('show'); }
+      else nrmCtl.classList.remove('show');
       showInfo(b);
     }
 
@@ -1381,8 +1521,25 @@ fb.ln.visible = false;
 
       off.multiplyScalar(Math.exp(-dt * 4)); tgv.copy(wpos(cur)).add(off);
       dist += (dd - dist) * Math.min(1, dt * 6);
-      C.position.set(tgv.x + dist * Math.sin(ph) * Math.sin(th), tgv.y + dist * Math.cos(ph), tgv.z + dist * Math.sin(ph) * Math.cos(th));
+
+      /* Сглаживание наклона и плавное переключение режима камеры. */
+      smoothTiltQ.slerp(curTiltQ, Math.min(1, dt * 4));
+      camMix += (camMode - camMix) * Math.min(1, dt * 3);
+      if (camMix >= 0.999) appliedQ.copy(smoothTiltQ);
+      else if (camMix <= 0.001) appliedQ.copy(qId);
+      else { appliedQ.copy(qId).slerp(smoothTiltQ, camMix); }
+
+      /* Позиция камеры в системе отсчёта цели (азимут — за спином, наклон — вокруг наклонённой оси). */
+      const thSpin = th + (objSpin(cur) - spinRef) * camMix;
+      const sp0 = Math.sin(ph), cp0 = Math.cos(ph);
+      camOff.set(dist * sp0 * Math.sin(thSpin), dist * cp0, dist * sp0 * Math.cos(thSpin));
+      camOff.applyQuaternion(appliedQ);
+      C.position.set(tgv.x + camOff.x, tgv.y + camOff.y, tgv.z + camOff.z);
+
+      /* up = ось вращения планеты → север/юг всегда на месте. */
+      C.up.set(0, 1, 0).applyQuaternion(appliedQ);
       C.lookAt(tgv);
+
       C.near = Math.max(dist * .004, .0005); C.far = 1e8; C.updateProjectionMatrix();
       sky.scale.setScalar(Math.max(1, dist / 1000)); sky.position.copy(C.position);
       glow.position.copy(sunM.position); gl2.position.copy(sunM.position); gl3.position.copy(sunM.position); gl4.position.copy(sunM.position); gl5.position.copy(sunM.position); glFar.position.copy(sunM.position);
