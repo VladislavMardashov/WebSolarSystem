@@ -470,8 +470,47 @@ bodies[0].d=real?AU_TO_UNITS*2.5:ov;bodies[0].r=real?sunScale:8;bodies[1].r=real
 const labels=[];
 function clearLabels(){labels.forEach(l=>l.el.remove());labels.length=0;}
 function makeLabel(text,isMoon){const el=document.createElement('div');el.className='label'+(isMoon?' moon':'');el.textContent=text;document.body.appendChild(el);return el;}
+const _labelRay=new TH.Raycaster();
+const _labelDir=new TH.Vector3();
+const _labelOrigin=new TH.Vector3();
+let _occluders=null;
+function getOccluders(){
+  if(_occluders)return _occluders;
+  _occluders=[];
+  for(const b of bodies){
+    if(b.isSun&&b.g)_occluders.push(b.g);
+    if(b.m)_occluders.push(b.m);
+    if(b.mo)for(const p of b.mo)if(p.children[0])_occluders.push(p.children[0]);
+  }
+  return _occluders;
+}
+function isOccluded(obj){
+  obj.getWorldPosition(_labelOrigin);
+  _labelDir.subVectors(_labelOrigin,C.position).normalize();
+  const distToTarget=C.position.distanceTo(_labelOrigin);
+  _labelRay.set(C.position,_labelDir);
+  _labelRay.far=distToTarget*0.98;
+  const hits=_labelRay.intersectObjects(getOccluders(),false);
+  for(const h of hits){
+    if(h.object===obj||h.object.parent===obj)continue;
+    if(h.distance<distToTarget*0.97)return true;
+  }
+  return false;
+}
 function updateLabels(){const v=new TH.Vector3();
-  const doOne=(l,visible)=>{ if(!visible){l.el.classList.remove('show');return;} l.obj.getWorldPosition(v);v.project(C);const x=(v.x*.5+.5)*innerWidth,y=(-v.y*.5+.5)*innerHeight;if(v.z>1||!isFinite(x)||!isFinite(y)||x<-24||x>innerWidth+24||y<-12||y>innerHeight+12)l.el.classList.remove('show');else{l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.classList.add('show');} };
+  const isCurrentTarget=(l)=>{
+    if(!cur||cur.isRoot)return false;
+    if(cur.isMoon)return l.obj===cur.g;
+    return l.obj===cur.g;
+  };
+  const doOne=(l,visible)=>{
+    if(!visible||isCurrentTarget(l)){l.el.classList.remove('show');return;}
+    l.obj.getWorldPosition(v);v.project(C);
+    const x=(v.x*.5+.5)*innerWidth,y=(-v.y*.5+.5)*innerHeight;
+    if(v.z>1||!isFinite(x)||!isFinite(y)||x<-24||x>innerWidth+24||y<-12||y>innerHeight+12){l.el.classList.remove('show');return;}
+    if(isOccluded(l.obj)){l.el.classList.remove('show');return;}
+    l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.classList.add('show');
+  };
   labels.forEach(l=>doOne(l,!(l.isMoon&&!moonLabelsVisible)));
   planetLabels.forEach(l=>doOne(l,planetLabelsVisible));
 }
