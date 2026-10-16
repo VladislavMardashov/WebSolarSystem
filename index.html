@@ -8,7 +8,7 @@
 :root{--bg:#000;--fg:#e9edf5;--chip:rgba(16,20,32,.72);--acc:#ffb347;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
 canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#bar{position:fixed;left:0;right:0;bottom:0;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;align-items:center;justify-content:flex-start;overflow:visible;flex-wrap:nowrap}
+#bar{position:fixed;left:0;right:0;bottom:0;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;align-items:center;justify-content:flex-start;overflow:visible;flex-wrap:nowrap;z-index:50}
 button{flex:none;border:1px solid rgba(255,255,255,.15);background:var(--chip);color:var(--fg);padding:10px 14px;border-radius:99px;font:inherit;backdrop-filter:blur(8px);cursor:pointer}
 button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 #fsBtn,#setBtn{width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px;flex:none}
@@ -27,11 +27,11 @@ button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 #load .pb{width:min(260px,70vw);height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
 #load .pb i{display:block;height:100%;width:0;background:var(--acc);transition:width .25s}
 #load .tx{font-size:13px;opacity:.75;color:var(--fg)}
-.dd{position:relative;z-index:30}
+.dd{position:relative;z-index:60}
 .dd-btn{min-width:120px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .dd-btn .tri{font-size:10px;opacity:.7;transition:transform .2s;display:inline-block}
 .dd.open .dd-btn .tri{transform:rotate(180deg)}
-.dd-list{display:none;position:absolute;bottom:calc(100% + 8px);left:0;min-width:150px;max-height:min(60vh,420px);overflow-y:auto;background:rgba(12,16,28,.95);border:1px solid rgba(255,255,255,.2);border-radius:12px;backdrop-filter:blur(12px);padding:4px;z-index:40;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+.dd-list{display:none;position:absolute;bottom:calc(100% + 8px);left:0;min-width:150px;max-height:min(60vh,420px);overflow-y:auto;background:rgba(12,16,28,.95);border:1px solid rgba(255,255,255,.2);border-radius:12px;backdrop-filter:blur(12px);padding:4px;z-index:70;box-shadow:0 8px 28px rgba(0,0,0,.55)}
 .dd.open .dd-list{display:block}
 .dd-item{display:block;width:100%;text-align:left;padding:8px 12px;border:none;border-radius:8px;background:transparent;color:var(--fg);font:inherit;cursor:pointer}
 .dd-item:hover,.dd-item.on{background:rgba(255,179,71,.25)}
@@ -59,7 +59,7 @@ button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 #venAtmCtl label{opacity:.75;font-size:11px}
 #venAtmCtl input[type=range]{width:130px;accent-color:var(--acc);cursor:pointer}
 #venAtmCtl .v{font-family:ui-monospace,monospace;font-size:10.5px;color:#e9edf5;min-width:40px;text-align:right;opacity:.9}
-#settingsMenu{position:fixed;left:8px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:35;display:flex;flex-direction:column;gap:10px;background:rgba(12,16,28,.95);border:1px solid rgba(255,255,255,.18);border-radius:14px;backdrop-filter:blur(14px);box-shadow:0 12px 32px rgba(0,0,0,.6);padding:12px;min-width:290px;opacity:0;visibility:hidden;transform:translateY(8px) scale(.98);transition:opacity .18s,transform .18s,visibility 0s linear .18s;pointer-events:none}
+#settingsMenu{position:fixed;left:8px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:55;display:flex;flex-direction:column;gap:10px;background:rgba(12,16,28,.95);border:1px solid rgba(255,255,255,.18);border-radius:14px;backdrop-filter:blur(14px);box-shadow:0 12px 32px rgba(0,0,0,.6);padding:12px;min-width:290px;opacity:0;visibility:hidden;transform:translateY(8px) scale(.98);transition:opacity .18s,transform .18s,visibility 0s linear .18s;pointer-events:none}
 #settingsMenu.open{opacity:1;visibility:visible;transform:translateY(0) scale(1);transition:opacity .18s,transform .18s,visibility 0s;pointer-events:auto}
 #settingsMenu .section{display:flex;flex-direction:column;gap:6px}
 #settingsMenu .section-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--fg);opacity:.5;padding:0 4px}
@@ -222,26 +222,26 @@ const ATM_STEPS=Q.atmSteps;
 const makeAtm=(p,q)=>{const Qf=1-(q||0),Rp=1/Math.cbrt(Qf),gm=new TH.SphereGeometry(Rp+p.H,48,32);gm.scale(1,Qf,1);return new TH.Mesh(gm,new TH.ShaderMaterial({uniforms:{uC:{value:new TH.Vector3(0,0,10)},uS:{value:new TH.Vector3(1,0,0)},uB:{value:new TH.Vector3(...p.b)},uRp:{value:Rp},uQ:{value:Qf},uH:{value:p.H},uK:{value:p.k},uM:{value:p.m},uI:{value:p.i}},vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`uniform vec3 uC;uniform vec3 uS;uniform vec3 uB;uniform float uRp;uniform float uQ;uniform float uH;uniform float uK;uniform float uM;uniform float uI;varying vec3 vP;
 void main(){vec3 P=vec3(vP.x,vP.y/uQ,vP.z);vec3 C0=vec3(uC.x,uC.y/uQ,uC.z);vec3 S0=normalize(vec3(uS.x,uS.y/uQ,uS.z));vec3 d=normalize(P-C0);float b=dot(P,d);float tf=-2.*b;float c=dot(P,P)-uRp*uRp;float disc=b*b-c;float te=tf;if(disc>0.&&b<0.)te=min(tf,-b-sqrt(disc));float dt=te/${ATM_STEPS}.;float mu=dot(S0,d);float g=.76;float ph=mix(.75*(1.+mu*mu),.48*(1.-g*g)/pow(1.+g*g-2.*g*mu,1.5),uM);vec3 sc=vec3(0.);float tv=0.;for(int i=0;i<${ATM_STEPS};i++){vec3 p=P+d*((float(i)+.5)*dt);float ln=length(p);float rho=exp(-(ln-uRp)/uH*uK);float bq=dot(p,S0);float dd=bq*bq-(ln*ln-uRp*uRp);float occ=0.;if(bq<0.)occ=smoothstep(0.,.04,dd);float ts=rho*uH*34./(max(bq/ln,0.)+.15);sc+=uB*(rho*dt*ph*(1.-occ))*exp(-uB*(ts+tv));tv+=rho*dt*20.*uH;}gl_FragColor=vec4(1.-exp(-sc*uI*26.),1.);}`,transparent:true,blending:TH.AdditiveBlending,depthWrite:false}));};
 const DB=[
-['Меркурий',16,.8,.24,0,'mer',0xb0a498,[],1,2439.7,.3871,0.2056,7.0,'Ближайшая к Солнцу планета. Сутки (58,6 земных дней) длиннее года (88 дней). Поверхность покрыта кратерами; перепады температур от −180 °C до +430 °C. Нет атмосферы и спутников.'],
-['Венера',22,1.5,.62,177,'ven',0xffffff,[],1,6051.8,.7233,0.0068,3.4,'Самая горячая планета Солнечной системы (средняя температура ≈ 465 °C) из-за парникового эффекта плотной углекислотной атмосферы. Вращается в обратную сторону; сутки длиннее года. Поверхность скрыта облаками серной кислоты.'],
-['Земля',29,1.6,1,23,'earth',0xffffff,[[3.4,.45,27.32,0xbbbbbb,1737.4,384400,'Луна']],0,6371,1,0.0167,0.0,'Единственная известная планета с жизнью. Имеет жидкую воду, кислородную атмосферу и один крупный спутник — Луну. Активная тектоника плит и магнитное поле защищают от солнечного ветра.'],
-['Марс',36,1.1,1.88,25,'mars',0xffffff,[[2,.18,0.3189,0x8a7f78,11.1,9376,'Фобос'],[3,.15,1.263,0x9a9088,6.2,23463,'Деймос']],0,3389.5,1.5237,0.0934,1.85,'Красная планета с тонкой атмосферой. Здесь находится Олимп — крупнейший вулкан в Солнечной системе (высота ≈ 22 км). Вдоль экватора тянется система каньонов Долины Маринер длиной более 4000 км. Имеет два небольших спутника неправильной формы.'],
-['Юпитер',68,5,11.9,3,'jup',0xffffff,[[7.5,.5,1.769,0xe8d060,1821.6,421700,'Ио'],[9.5,.45,3.551,0xe6dccc,1560.8,671034,'Европа'],[12,.7,7.155,0xa09585,2634.1,1070412,'Ганимед'],[15,.65,16.689,0x6e655c,2410.3,1882709,'Каллисто']],1,69911,5.2044,0.0489,1.3,'Крупнейшая планета. Большое Красное Пятно — гигантский антициклон, существующий сотни лет, размером с Землю. Обладает мощным магнитным полем и системой колец. Четыре крупных спутника Галилея — Ио, Европа, Ганимед и Каллисто.'],
-['Сатурн',90,4.2,29.5,27,'sat',0xffffff,[[14,.6,15.945,0xd9993f,2574.7,1221870,'Титан'],[11,.3,4.518,0xcfcfcf,764.3,527108,'Рея'],[10.4,.2,2.737,0xffffff,561.4,377396,'Диона']],1,58232,9.5826,0.0565,2.49,'Знаменит обширной системой колец из льда и камня. Средняя плотность меньше плотности воды — планета могла бы плавать. Крупнейший спутник Титан имеет плотную атмосферу и озёра из жидкого метана.'],
-['Уран',110,2.6,84,98,'ura',0xffffff,[[5,.35,8.706,0xaaa8a5,788.9,435910,'Титания'],[6.3,.33,13.463,0x9a9490,761.4,583520,'Оберон']],1,25362,19.2184,0.0463,0.77,'Ледяной гигант с осью вращения, наклонённой почти на 98° — «катается» на боку. Атмосфера богата метаном, придающим голубоватый цвет. Имеет тонкие кольца и систему спутников.'],
-['Нептун',128,2.5,165,28,'nep',0xffffff,[[5.3,.4,-5.877,0xd8c8c0,1353.4,354759,'Тритон']],1,24622,30.1104,0.0097,1.77,'Самая дальняя из восьми планет. Обладает самыми сильными ветрами в Солнечной системе (до 2100 км/ч). Крупнейший спутник Тритон движется по ретроградной орбите и, вероятно, был захвачен.'],
-['Церера',51,.45,4.6,4,'cer',0xffffff,[],1,469.7,2.7675,0.0758,10.59,'Крупнейший объект главного пояса астероидов и единственная карликовая планета во внутренней Солнечной системе. Имеет криовулканы и возможный подповерхностный океан. Яркие пятна в кратере Оккатор — отложения солей.'],
-['Плутон',169,.7,248,122.5,'plu',0xffffff,[[1.9,.36,6.387,0xffffff,606,19591,'Харон'],[2.9,.08,24.856,0xffffff,19,48694,'Никта'],[3.5,.09,38.202,0xffffff,21,64738,'Гидра']],0,1188.3,39.482,0.2488,17.16,'Карликовая планета пояса Койпера с азотной атмосферой, которая замерзает зимой. Равнина Спутник — огромная ледяная равнина в форме сердца. Вместе с Хароном образует почти двойную систему.'],
-['Хаумеа',176,.5,283.3,null,'hau',0xffffff,[[1.7,.08,25.657,0xffffff,85,25657,'Намака'],[2.4,.12,49.88,0xffffff,160,49880,'Хииака']],0,798,43.13,0.195,28.2,'Карликовая планета сильно вытянутой формы из-за очень быстрого вращения (период ≈ 4 часа). Имеет кольцо и два спутника. Поверхность покрыта водяным льдом.'],
-['Макемаке',182,.55,309.9,null,'mak',0xffffff,[],1,715,45.79,0.159,29.0,'Карликовая планета пояса Койпера с красноватой поверхностью, богатой толинами. Второй по яркости объект пояса Койпера после Плутона. Атмосфера практически отсутствует.'],
-['Эрида',225,.75,558,null,'eri',0xffffff,[[2.2,.18,37.273,0xffffff,350,37273,'Дисномия']],0,1163,67.8,0.44,44.04,'Самая массивная из известных карликовых планет. Высокоэксцентричная орбита выносит её далеко за пояс Койпера. Поверхность очень яркая и покрыта метановым льдом. Имеет один спутник — Дисномию.']
+['Меркурий',16,.8,.24,0,'mer',0xb0a498,[],0,2439.7,.3871,0.2056,7.0,'Ближайшая к Солнцу планета, названная в честь римского бога-посланника. Сутки (58,6 земных дней) длиннее года (88 дней). Поверхность покрыта кратерами; перепады температур от −180 °C до +430 °C. Нет атмосферы и спутников. Исследован аппаратами Mariner 10 и MESSENGER.'],
+['Венера',22,1.5,.62,177,'ven',0xffffff,[],0,6051.8,.7233,0.0068,3.4,'Названа в честь римской богини любви. Самая горячая планета (≈ 465 °C) из-за парникового эффекта плотной CO₂-атмосферы. Вращается в обратную сторону; сутки длиннее года. Поверхность скрыта облаками серной кислоты. Первый успешный спуск — советская «Венера-7» (1970).'],
+['Земля',29,1.6,1,23,'earth',0xffffff,[[3.4,.45,27.32,0xbbbbbb,1737.4,384400,'Луна']],0,6371,1,0.0167,0.0,'Единственная известная планета с жизнью. Имя происходит от древнегерманского и славянских корней, означающих «земля/почва». Имеет жидкую воду, кислородную атмосферу и один крупный спутник. Активная тектоника плит и магнитное поле защищают от солнечного ветра.'],
+['Марс',36,1.1,1.88,25,'mars',0xffffff,[[2,.18,0.3189,0x8a7f78,11.1,9376,'Фобос'],[3,.15,1.263,0x9a9088,6.2,23463,'Деймос']],0,3389.5,1.5237,0.0934,1.85,'Красная планета, названная в честь римского бога войны. Здесь находится Олимп — крупнейший вулкан Солнечной системы (≈ 22 км). Вдоль экватора — каньоны Долины Маринер (> 4000 км). Два небольших спутника неправильной формы. Активно исследуется роверами.'],
+['Юпитер',68,5,11.9,3,'jup',0xffffff,[[7.5,.5,1.769,0xe8d060,1821.6,421700,'Ио'],[9.5,.45,3.551,0xe6dccc,1560.8,671034,'Европа'],[12,.7,7.155,0xa09585,2634.1,1070412,'Ганимед'],[15,.65,16.689,0x6e655c,2410.3,1882709,'Каллисто']],1,69911,5.2044,0.0489,1.3,'Крупнейшая планета, названная в честь верховного римского бога. Большое Красное Пятно — антициклон размером с Землю, известный с XVII века. Мощное магнитное поле и система колец. Четыре галилеевых спутника открыты Галилеем в 1610 году.'],
+['Сатурн',90,4.2,29.5,27,'sat',0xffffff,[[14,.6,15.945,0xd9993f,2574.7,1221870,'Титан'],[11,.3,4.518,0xcfcfcf,764.3,527108,'Рея'],[10.4,.2,2.737,0xffffff,561.4,377396,'Диона']],1,58232,9.5826,0.0565,2.49,'Назван в честь римского бога земледелия (греч. Кронос). Знаменит обширной системой колец из льда и камня. Средняя плотность меньше воды — планета могла бы плавать. Крупнейший спутник Титан имеет плотную атмосферу и озёра из жидкого метана. Кольца впервые наблюдал Галилей (1610).'],
+['Уран',110,2.6,84,98,'ura',0xffffff,[[5,.35,8.706,0xaaa8a5,788.9,435910,'Титания'],[6.3,.33,13.463,0x9a9490,761.4,583520,'Оберон']],1,25362,19.2184,0.0463,0.77,'Ледяной гигант, названный в честь греческого бога неба. Открыт Уильямом Гершелем в 1781 году — первая планета, найденная в Новое время. Ось наклонена почти на 98° — «катается» на боку. Атмосфера богата метаном. Имеет тонкие кольца и систему спутников.'],
+['Нептун',128,2.5,165,28,'nep',0xffffff,[[5.3,.4,-5.877,0xd8c8c0,1353.4,354759,'Тритон']],1,24622,30.1104,0.0097,1.77,'Самая дальняя из восьми планет, названная в честь римского бога морей. Существование предсказано математически (Леверье и Адамс), открыт в 1846 году. Самые сильные ветры в Солнечной системе (до 2100 км/ч). Крупнейший спутник Тритон движется по ретроградной орбите и, вероятно, был захвачен.'],
+['Церера',51,.45,4.6,4,'cer',0xffffff,[],0,469.7,2.7675,0.0758,10.59,'Крупнейший объект главного пояса астероидов и единственная карликовая планета во внутренней Солнечной системе. Названа в честь римской богини земледелия. Открыта Джузеппе Пиацци в 1801 году. Имеет криовулканы и возможный подповерхностный океан. Яркие пятна в кратере Оккатор — отложения солей.'],
+['Плутон',169,.7,248,122.5,'plu',0xffffff,[[1.9,.36,6.387,0xffffff,606,19591,'Харон'],[2.9,.08,24.856,0xffffff,19,48694,'Никта'],[3.5,.09,38.202,0xffffff,21,64738,'Гидра']],0,1188.3,39.482,0.2488,17.16,'Карликовая планета пояса Койпера, названная в честь римского бога подземного мира. Открыта Клайдом Томбо в 1930 году. Азотная атмосфера замерзает зимой. Равнина Спутник — огромная ледяная равнина в форме сердца. Вместе с Хароном образует почти двойную систему. Исследован зондом New Horizons (2015).'],
+['Хаумеа',176,.5,283.3,null,'hau',0xffffff,[[1.7,.08,25.657,0xffffff,85,25657,'Намака'],[2.4,.12,49.88,0xffffff,160,49880,'Хииака']],0,798,43.13,0.195,28.2,'Карликовая планета, названная в честь гавайской богини плодородия и деторождения. Сильно вытянута из-за очень быстрого вращения (период ≈ 4 часа). Имеет кольцо и два спутника. Поверхность покрыта водяным льдом. Открыта в 2004–2005 годах.'],
+['Макемаке',182,.55,309.9,null,'mak',0xffffff,[],0,715,45.79,0.159,29.0,'Карликовая планета пояса Койпера, названная в честь бога-творца народа рапануи (остров Пасхи). Красноватая поверхность богата толинами. Второй по яркости объект пояса Койпера после Плутона. Атмосфера практически отсутствует. Открыта в 2005 году.'],
+['Эрида',225,.75,558,null,'eri',0xffffff,[[2.2,.18,37.273,0xffffff,350,37273,'Дисномия']],0,1163,67.8,0.44,44.04,'Самая массивная из известных карликовых планет, названная в честь греческой богини раздора. Высокоэксцентричная орбита выносит её далеко за пояс Койпера. Поверхность очень яркая и покрыта метановым льдом. Имеет один спутник — Дисномию. Открыта в 2005 году; её открытие ускорило пересмотр статуса Плутона.']
 ];
 const SUN_REAL_KM=696340,EARTH_KM=6371,AU_KM=149597871,KM_PER_UNIT=EARTH_KM/1.6,AU_TO_UNITS=AU_KM/KM_PER_UNIT;
 const ov=Math.max(180,Math.min(520,100/(Math.tan(.48)*Math.min(innerWidth/innerHeight,1))));
 let wasP=false,real=0;
 const SIM_LIGHT_MUL=0.6;
 const SKY_REF=67.8;
-const bodies=[{n:'Обзор',g:new TH.Object3D(),r:8,d:ov,isRoot:true},{n:'Солнце',g:sunM,r:8,isSun:true,info:'Центральная звезда Солнечной системы — жёлтый карлик спектрального класса G2V. Масса составляет 99,8 % всей системы. Энергия вырабатывается термоядерным синтезом водорода в гелий в ядре. Возраст ≈ 4,6 млрд лет; через ≈ 5 млрд лет станет красным гигантом.'}];
+const bodies=[{n:'Обзор',g:new TH.Object3D(),r:8,d:ov,isRoot:true},{n:'Солнце',g:sunM,r:8,isSun:true,info:'Центральная звезда Солнечной системы — жёлтый карлик спектрального класса G2V. Название происходит от древнерусского и общеиндоевропейских корней, связанных с «солнцем/светом». Масса — 99,8 % всей системы. Энергия вырабатывается термоядерным синтезом водорода в гелий. Возраст ≈ 4,6 млрд лет; через ≈ 5 млрд лет станет красным гигантом. В мифологии многих народов — божество или око бога.'}];
 const planetLabels=[];
 await prog(75,'Планеты и спутники…');
 const MINC={'Луна':5.145,'Фобос':1.08,'Деймос':1.79,'Ио':.04,'Европа':.47,'Ганимед':.2,'Каллисто':.19,'Диона':.03,'Рея':.35,'Титан':.33,'Титания':.08,'Оберон':.07,'Тритон':157.3,'Намака':113,'Хииака':126.4,'Дисномия':78.3};
@@ -279,26 +279,92 @@ let atm=null;
 {const ap=ATM[k];if(ap){atm=makeAtm(ap,({jup:.06487,sat:.09796})[k]);atm.renderOrder=3;atm.userData.I0=ap.i;atm.rotation.z=tilt*PI/180;g.add(atm);}}
 let ringMesh=null,ringTex=null,rU=null;
 if(ring){
+  /* Индивидуальные параметры колец (относительные радиусы и стиль текстуры) */
   const RING_CFG={
-    sat:{inner:1.3,outer:2.4,r:215,g:190,b:150,em:0x2a241a,bright:1},
-    jup:{inner:1.4,outer:1.9,r:180,g:170,b:160,em:0x1a1816,bright:0.35},
-    ura:{inner:1.5,outer:2.05,r:160,g:180,b:200,em:0x1a2028,bright:0.45},
-    nep:{inner:1.6,outer:2.3,r:140,g:160,b:200,em:0x141c28,bright:0.4}
+    sat:{
+      inner:1.22,outer:2.35,
+      em:0x2a241a,
+      /* Классические кольца: плотное B, щель Кассини, A с более тонкой структурой */
+      gen:(t)=>{
+        let al=0;
+        if(t<0.03||t>0.97) al=0;
+        else if(t<0.18) al=0.12+0.25*Math.sin(t*40);               /* C-кольцо */
+        else if(t<0.42) al=0.55+0.35*Math.abs(Math.sin(t*22));      /* B — самое яркое */
+        else if(t<0.48) al=0.02;                                    /* щель Кассини */
+        else if(t<0.78) al=0.35+0.3*Math.abs(Math.sin(t*28+1));     /* A */
+        else if(t<0.82) al=0.08;                                    /* Encke-подобная */
+        else al=0.15+0.1*Math.sin(t*50);
+        const r=210-t*25|0,g=185-t*20|0,b=145-t*15|0;
+        return [r,g,b,al];
+      }
+    },
+    jup:{
+      inner:1.55,outer:1.95,
+      em:0x12110f,
+      /* Очень тонкое, тусклое пылевое кольцо + слабый гало-эффект по краям */
+      gen:(t)=>{
+        let al=0;
+        const core=Math.exp(-Math.pow((t-0.45)/0.12,2));            /* узкое main ring */
+        const halo=0.15*Math.exp(-Math.pow((t-0.45)/0.35,2));
+        al=(0.18*core+halo)*(0.7+0.3*Math.sin(t*60));
+        if(t<0.08||t>0.92) al*=0.3;
+        const r=170-t*15|0,g=165-t*12|0,b=155-t*10|0;
+        return [r,g,b,al*0.55];
+      }
+    },
+    ura:{
+      inner:1.45,outer:2.15,
+      em:0x101418,
+      /* Узкие тёмные кольца: несколько резких полос (ε, δ, γ, η, β, α и др.) */
+      gen:(t)=>{
+        const bands=[
+          [0.12,0.03,0.25],[0.22,0.025,0.22],[0.32,0.02,0.18],
+          [0.42,0.035,0.28],[0.55,0.02,0.15],[0.68,0.04,0.35], /* ε — самая яркая */
+          [0.78,0.015,0.12],[0.88,0.02,0.1]
+        ];
+        let al=0.015;
+        for(const[c,w,a] of bands){
+          const d=Math.abs(t-c);
+          if(d<w) al=Math.max(al,a*(1-d/w));
+        }
+        al*=0.7+0.3*Math.sin(t*90);
+        const r=90+t*20|0,g=100+t*25|0,b=110+t*30|0;
+        return [r,g,b,al];
+      }
+    },
+    nep:{
+      inner:1.5,outer:2.45,
+      em:0x0c1018,
+      /* Несколько узких тёмных колец + более плотное внешнее (Adams) с вариацией */
+      gen:(t)=>{
+        const bands=[
+          [0.15,0.04,0.12],[0.28,0.03,0.1],[0.42,0.025,0.08],
+          [0.58,0.035,0.14],[0.78,0.06,0.28] /* Adams — самое заметное */
+        ];
+        let al=0.01;
+        for(const[c,w,a] of bands){
+          const d=Math.abs(t-c);
+          if(d<w) al=Math.max(al,a*(1-d/w)*(0.75+0.25*Math.sin(t*40+c*10)));
+        }
+        const r=80+t*25|0,g=95+t*30|0,b=130+t*20|0;
+        return [r,g,b,al];
+      }
+    }
   };
   const cfg=RING_CFG[k]||RING_CFG.sat;
   const ri=cfg.inner,ro=cfg.outer,rw=ro-ri;
-  const rg=new TH.RingGeometry(ri,ro,128),p=rg.attributes.position,u=rg.attributes.uv,v=new TH.Vector3();
+  const rg=new TH.RingGeometry(ri,ro,160),p=rg.attributes.position,u=rg.attributes.uv,v=new TH.Vector3();
   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);u.setXY(i,(v.length()-ri)/rw,0);}
-  const rc=document.createElement('canvas');rc.width=256;rc.height=1;const x=rc.getContext('2d');
-  for(let i=0;i<256;i++){
-    const t=i/256;
-    let al=t<.04||t>.96?0:t>.48&&t<.55?.04:.25+.5*Math.abs(Math.sin(i*.8)*Math.sin(i*.19+1));
-    al*=cfg.bright;
-    x.fillStyle=`rgba(${cfg.r-t*30|0},${cfg.g-t*30|0},${cfg.b-t*20|0},${al})`;
+  const rc=document.createElement('canvas');rc.width=512;rc.height=1;const x=rc.getContext('2d');
+  for(let i=0;i<512;i++){
+    const t=i/511;
+    const [r,g,b,al]=cfg.gen(t);
+    x.fillStyle=`rgba(${r},${g},${b},${Math.max(0,Math.min(1,al))})`;
     x.fillRect(i,0,1,1);
   }
   ringTex=new TH.CanvasTexture(rc);
-  ringMesh=new TH.Mesh(rg,new TH.MeshStandardMaterial({map:ringTex,emissive:cfg.em,roughness:1,metalness:0,transparent:true,side:TH.DoubleSide,depthWrite:false}));
+  ringTex.minFilter=TH.LinearFilter;ringTex.magFilter=TH.LinearFilter;
+  ringMesh=new TH.Mesh(rg,new TH.MeshStandardMaterial({map:ringTex,emissive:cfg.em,roughness:1,metalness:0,transparent:true,side:TH.DoubleSide,depthWrite:false,opacity:1}));
   ringMesh.rotation.x=PI/2;tg.add(ringMesh);
   rU={uSun:{value:new TH.Vector3()},uN:{value:new TH.Vector3(0,1,0).applyAxisAngle(new TH.Vector3(0,0,1),tilt*PI/180)},uS:{value:1},uA:{value:1},uCc:{value:1},uRT:{value:ringTex}};
   m.material.onBeforeCompile=sh=>{Object.assign(sh.uniforms,rU);patchV(sh);sh.fragmentShader=RPs+sh.fragmentShader.replace('#include <lights_fragment_end>','#include <lights_fragment_end>\n'+PLs);};
@@ -410,7 +476,27 @@ function updateLabels(){const v=new TH.Vector3();
   planetLabels.forEach(l=>doOne(l,planetLabelsVisible));
 }
 let infoCollapsed=true;
-function showInfo(b){const el=$('#info');if(!infoPanelVisible){el.classList.remove('show');return;}if(b.isMoon){const moonFacts={'Луна':'Единственный естественный спутник Земли. Вызывает приливы; поверхность покрыта кратерами и «морями» из застывшей лавы. Среднее расстояние 384 400 км.','Фобос':'Ближайший спутник Марса. Имеет неправильную форму и покрыт кратерами; орбита постепенно снижается.','Деймос':'Внешний спутник Марса. Маленький и слабо отражающий; вероятно, захваченный астероид.','Ио':'Самый вулканически активный объект Солнечной системы. Поверхность обновляется потоками серы.','Европа':'Ледяная кора скрывает подповерхностный океан жидкой воды — один из главных кандидатов на поиск жизни.','Ганимед':'Крупнейший спутник в Солнечной системе (больше Меркурия). Имеет собственное магнитное поле.','Каллисто':'Самый кратерированный спутник Юпитера. Древняя поверхность почти не обновлялась.','Титан':'Единственный спутник с плотной атмосферой. Озёра и реки из жидкого метана и этана.','Рея':'Второй по размеру спутник Сатурна. Ледяная поверхность с яркими кратерами.','Диона':'Ледяной спутник Сатурна с системой ярких разломов («полосы»).','Титания':'Крупнейший спутник Урана. Имеет каньоны и следы древней тектоники.','Оберон':'Внешний крупный спутник Урана. Покрыт кратерами и тёмным материалом.','Тритон':'Крупнейший спутник Нептуна. Ретроградная орбита; активные гейзеры азота.','Харон':'Крупнейший спутник Плутона; образует с ним почти двойную систему. Центр масс вне Плутона.','Никта':'Маленький неправильный спутник Плутона.','Гидра':'Внешний маленький спутник Плутона.','Намака':'Внутренний спутник Хаумеа.','Хииака':'Внешний и более крупный спутник Хаумеа.','Дисномия':'Единственный известный спутник Эриды.'};const fact=moonFacts[b.n]||'Естественный спутник.';el.innerHTML=`<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body"><p>${fact}</p><p>Спутник планеты: ${b.parent.n}</p><div class="row"><span class="k">Радиус</span><span>${b.ud.mkm.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Расстояние до планеты</span><span>${b.ud.mdist.toLocaleString('ru')} км</span></div></div>`;el.classList.toggle('collapsed',infoCollapsed);el.classList.add('show');el.querySelector('.info-head').onclick=()=>{infoCollapsed=!infoCollapsed;el.classList.toggle('collapsed',infoCollapsed);};return;}if(b.isRoot){el.classList.remove('show');return;}let body='';if(b.isSun){body=`<p>${b.info||''}</p><div class="row"><span class="k">Радиус</span><span>696 340 км</span></div><div class="row"><span class="k">Масса</span><span>1,989×10³⁰ кг</span></div><div class="row"><span class="k">Темп. поверхности</span><span>≈ 5500 °C</span></div>`;}else{body=`<p>${b.info||''}</p><div class="row"><span class="k">Радиус</span><span>${b.kmR.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Орбита</span><span>${b.au} а.е.</span></div><div class="row"><span class="k">Период</span><span>${b.T} лет</span></div><div class="row"><span class="k">Эксцентриситет</span><span>${b.ecc}</span></div><div class="row"><span class="k">Свет Солнца</span><span>${(v=>v>=100?Math.round(v):v>=1?v.toFixed(1):v.toPrecision(2))(100/(b.au*b.au))}% от земного</span></div><div class="row"><span class="k">Наклон оси</span><span>${b.tilt==null?'—':b.tilt+'°'}</span></div>`;if(b.mo&&b.mo.length)body+=`<div class="row"><span class="k">Спутники</span><span>${b.mo.map(p=>p.userData.name).join(', ')}</span></div>`;}el.innerHTML=`<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body">${body}</div>`;el.classList.toggle('collapsed',infoCollapsed);el.classList.add('show');el.querySelector('.info-head').onclick=()=>{infoCollapsed=!infoCollapsed;el.classList.toggle('collapsed',infoCollapsed);};}
+function showInfo(b){const el=$('#info');if(!infoPanelVisible){el.classList.remove('show');return;}if(b.isMoon){const moonFacts={
+'Луна':'Единственный естественный спутник Земли. Имя — общеславянское и индоевропейское. Вызывает приливы; поверхность покрыта кратерами и «морями» из застывшей лавы. Среднее расстояние 384 400 км. Первые люди ступили на неё в 1969 году (Аполлон-11).',
+'Фобос':'Ближайший спутник Марса, назван в честь сына Ареса (Страх). Имеет неправильную форму и покрыт кратерами; орбита постепенно снижается — через десятки миллионов лет упадёт или разрушится.',
+'Деймос':'Внешний спутник Марса, назван в честь другого сына Ареса (Ужас). Маленький и слабо отражающий; вероятно, захваченный астероид. Открыт Асафом Холлом в 1877 году вместе с Фобосом.',
+'Ио':'Самый вулканически активный объект Солнечной системы. Назван в честь возлюбленной Зевса. Поверхность непрерывно обновляется потоками серы. Открыт Галилеем в 1610 году.',
+'Европа':'Ледяная кора скрывает подповерхностный океан жидкой воды — один из главных кандидатов на поиск жизни. Названа в честь финикийской царевны, возлюбленной Зевса. Открыта Галилеем в 1610 году.',
+'Ганимед':'Крупнейший спутник в Солнечной системе (больше Меркурия). Имеет собственное магнитное поле. Назван в честь виночерпия богов. Открыт Галилеем в 1610 году.',
+'Каллисто':'Самый кратерированный спутник Юпитера. Древняя поверхность почти не обновлялась. Названа в честь нимфы, возлюбленной Зевса. Открыта Галилеем в 1610 году.',
+'Титан':'Единственный спутник с плотной атмосферой. Озёра и реки из жидкого метана и этана. Назван в честь титанов греческой мифологии. Открыт Христианом Гюйгенсом в 1655 году.',
+'Рея':'Второй по размеру спутник Сатурна. Ледяная поверхность с яркими кратерами. Названа в честь титаниды, матери олимпийских богов. Открыта Джованни Кассини в 1672 году.',
+'Диона':'Ледяной спутник Сатурна с системой ярких разломов («полосы»). Названа в честь титаниды. Открыта Кассини в 1684 году.',
+'Титания':'Крупнейший спутник Урана. Имеет каньоны и следы древней тектоники. Названа в честь царицы фей из «Сна в летнюю ночь» Шекспира. Открыта Уильямом Гершелем в 1787 году.',
+'Оберон':'Внешний крупный спутник Урана. Покрыт кратерами и тёмным материалом. Назван в честь короля фей (Шекспир). Открыт Гершелем в 1787 году.',
+'Тритон':'Крупнейший спутник Нептуна. Ретроградная орбита; активные гейзеры азота. Назван в честь сына Посейдона. Открыт Уильямом Ласселлом в 1846 году, всего через 17 дней после открытия самого Нептуна.',
+'Харон':'Крупнейший спутник Плутона; образует с ним почти двойную систему (центр масс вне Плутона). Назван в честь перевозчика душ в подземном мире. Открыт Джеймсом Кристи в 1978 году.',
+'Никта':'Маленький неправильный спутник Плутона. Названа в честь греческой богини ночи. Открыта в 2005 году телескопом «Хаббл».',
+'Гидра':'Внешний маленький спутник Плутона. Названа в честь мифической многоголовой гидры. Открыта в 2005 году вместе с Никтой.',
+'Намака':'Внутренний спутник Хаумеа. Названа в честь дочери гавайской богини Хаумеа. Открыт в 2005 году.',
+'Хииака':'Внешний и более крупный спутник Хаумеа. Назван в честь сестры Намаки. Открыт в 2005 году.',
+'Дисномия':'Единственный известный спутник Эриды. Названа в честь дочери богини раздора Эриды (греч. «беззаконие»). Открыта в 2005 году.'
+};const fact=moonFacts[b.n]||'Естественный спутник.';el.innerHTML=`<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body"><p>${fact}</p><p>Спутник планеты: ${b.parent.n}</p><div class="row"><span class="k">Радиус</span><span>${b.ud.mkm.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Расстояние до планеты</span><span>${b.ud.mdist.toLocaleString('ru')} км</span></div></div>`;el.classList.toggle('collapsed',infoCollapsed);el.classList.add('show');el.querySelector('.info-head').onclick=()=>{infoCollapsed=!infoCollapsed;el.classList.toggle('collapsed',infoCollapsed);};return;}if(b.isRoot){el.classList.remove('show');return;}let body='';if(b.isSun){body=`<p>${b.info||''}</p><div class="row"><span class="k">Радиус</span><span>696 340 км</span></div><div class="row"><span class="k">Масса</span><span>1,989×10³⁰ кг</span></div><div class="row"><span class="k">Темп. поверхности</span><span>≈ 5500 °C</span></div>`;}else{body=`<p>${b.info||''}</p><div class="row"><span class="k">Радиус</span><span>${b.kmR.toLocaleString('ru')} км</span></div><div class="row"><span class="k">Орбита</span><span>${b.au} а.е.</span></div><div class="row"><span class="k">Период</span><span>${b.T} лет</span></div><div class="row"><span class="k">Эксцентриситет</span><span>${b.ecc}</span></div><div class="row"><span class="k">Свет Солнца</span><span>${(v=>v>=100?Math.round(v):v>=1?v.toFixed(1):v.toPrecision(2))(100/(b.au*b.au))}% от земного</span></div><div class="row"><span class="k">Наклон оси</span><span>${b.tilt==null?'—':b.tilt+'°'}</span></div>`;if(b.mo&&b.mo.length)body+=`<div class="row"><span class="k">Спутники</span><span>${b.mo.map(p=>p.userData.name).join(', ')}</span></div>`;}el.innerHTML=`<div class="info-head"><h3>${b.n}</h3><span class="info-tri">▼</span></div><div class="info-body">${body}</div>`;el.classList.toggle('collapsed',infoCollapsed);el.classList.add('show');el.querySelector('.info-head').onclick=()=>{infoCollapsed=!infoCollapsed;el.classList.toggle('collapsed',infoCollapsed);};}
 const bar=$('#bar');
 const fpsEl=document.createElement('div');fpsEl.id='fps';fpsEl.textContent='— FPS · '+Q_LABEL;document.body.append(fpsEl);
 let _fFrames=0,_fAccum=0;
