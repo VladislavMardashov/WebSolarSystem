@@ -457,7 +457,7 @@ let llFor=null;
 function updateLocalOrbit(){
   if(!orbitsVisible){if(llFor){llFor.ln.visible=false;llFor=null;}LL.visible=false;return;}
   const fb=real?(cur.isMoon?cur.parent:cur):null,ok=!!(fb&&fb.ln&&fb.au);
-  if(llFor&&(llFor!==fb||!ok)){llFor.ln.visible=orbitsVisible;llFor=null;LL.visible=false;}
+  if(llFor&&(llFor!==fb||!ok)){llFor.ln.visible=orbitsVisible&&llFor.k!=='cer';llFor=null;LL.visible=false;}
   if(!ok)return;
   if(llFor!==fb){llFor=fb;LL.material.color.copy(fb.ln.material.color);LL.material.opacity=fb.ln.material.opacity;LL.visible=true;}
   LL.rotation.y=fb.rotY||0;fb.ln.visible=false;
@@ -496,16 +496,20 @@ function getOccluders(){
   }
   return _occluders;
 }
+const _ocC=new TH.Vector3();
 function isOccluded(obj){
+  /* Аналитический луч–сфера по ограничивающим сферам тел: раньше был Raycaster по мешам (у Земли в режиме неба ~590 тыс. треугольников → до ~20 мс на подпись) */
   obj.getWorldPosition(_labelOrigin);
-  _labelDir.subVectors(_labelOrigin,C.position).normalize();
-  const distToTarget=C.position.distanceTo(_labelOrigin);
-  _labelRay.set(C.position,_labelDir);
-  _labelRay.far=distToTarget*0.98;
-  const hits=_labelRay.intersectObjects(getOccluders(),false);
-  for(const h of hits){
-    if(h.object===obj||h.object.parent===obj)continue;
-    if(h.distance<distToTarget*0.97)return true;
+  _labelDir.subVectors(_labelOrigin,C.position);
+  const D=_labelDir.length();if(D<1e-9)return false;_labelDir.multiplyScalar(1/D);
+  for(const m of getOccluders()){
+    if(m===obj||m.parent===obj||!m.geometry)continue;
+    const bs=m.geometry.boundingSphere||(m.geometry.computeBoundingSphere(),m.geometry.boundingSphere);if(!bs)continue;
+    _ocC.copy(bs.center).applyMatrix4(m.matrixWorld).sub(C.position);
+    const r=bs.radius*m.matrixWorld.getMaxScaleOnAxis(),tca=_ocC.dot(_labelDir);
+    if(tca<=0)continue;
+    const d2=_ocC.lengthSq()-tca*tca;if(d2>=r*r)continue;
+    if(tca-Math.sqrt(r*r-d2)<D*0.97)return true;
   }
   return false;
 }
@@ -716,11 +720,12 @@ function atmo(){
   mat.uniforms.uLim.value=k>0?7+(limMag(alt)-7)*k-2.2*mk*k:7;
   if(skySphere)skySphere.userData.uni.uDim.value=(1-k*sm(-16,-6,alt))*(1-0.45*mk*k);
 }
-let _hid=false;const _bodies=bodies.filter(b=>!b.isRoot&&!b.isSun&&b!==earthB);
+let _hid=false,_ekHid=false;const _bodies=bodies.filter(b=>!b.isRoot&&!b.isSun&&b!==earthB);
 function upd(t){
   const hide=fpsState==='stand'||fpsState==='fly';
   {const wantA=!hide&&!PROF.off.shadows;if(renderer.shadowMap.autoUpdate!==wantA){renderer.shadowMap.autoUpdate=wantA;if(!wantA)renderer.shadowMap.needsUpdate=true;}}
-  if(hide||_hid){_bodies.forEach(b=>{if(b.g)b.g.visible=!hide;if(b.ln)b.ln.visible=hide?skyOrbits:orbitsVisible;});earthB.mo.forEach(m=>{m.visible=!hide;});_hid=hide;}
+  if(hide||_hid){_bodies.forEach(b=>{if(b.g)b.g.visible=!hide;if(b.ln)b.ln.visible=(hide?skyOrbits:orbitsVisible)&&b.k!=='cer';});earthB.mo.forEach(m=>{m.visible=!hide;});_hid=hide;}
+  {if(fpsState!=='off'){earthB.ln.visible=false;LL.visible=false;_ekHid=true;}else if(_ekHid){_ekHid=false;earthB.ln.visible=orbitsVisible;LL.visible=!!llFor&&orbitsVisible;}}
   const he=helioEcl('earth',t);
   for(let i=0;i<7;i++){const hp=helioEcl(PK[i],t),gv=[hp[0]-he[0],hp[1]-he[1],hp[2]-he[2]],D=Math.hypot(...gv),r=Math.hypot(...hp);const w=ecl2w(gv).multiplyScalar(2900/D);ppos[i*3]=w.x;ppos[i*3+1]=w.y;ppos[i*3+2]=w.z;pmag[i]=PV1[i]+5*Math.log10(r*D)-1.5;}
   pg.attributes.position.needsUpdate=true;pg.attributes.aMag.needsUpdate=true;
@@ -740,7 +745,31 @@ function gEarth(off){const L=[earthB.m,earthB.cloudsMesh,earthB.vatm,earthB.atm]
   if(!off&&gEarthOff)gSaved.forEach(([o,v])=>{o.visible=v;});
   if(off)L.forEach(o=>{if(o)o.visible=false;});
   gEarthOff=off;}
+/* LOD Земли по высоте камеры (в радиусах Земли): >1R — базовая 96×64 (12 тыс. треуг.), 0.1–1R — 192×96 (36 тыс.), <0.1R — 384×192 (147 тыс.).
+   Края силуэта: отклонение полигона R·π²/(2N²) < 0.25 px на любом уровне в своём диапазоне высот. Когда Земля скрыта фейковой землёй — всегда базовая. */
+let _lodCur=0;
+function earthLOD(){
+  if(fpsState==='off'||fpsState==='exit'||!fpsGeoCoarse){_lodCur=0;return;}
+  let want;
+  if(gEarthOff&&!PROF.off.ground)want=0;
+  else{
+    const mw=earthB.m.matrixWorld;_ep.setFromMatrixPosition(mw);
+    const h=C.position.distanceTo(_ep)/mw.getMaxScaleOnAxis()-1;
+    want=_lodCur;
+    if(_lodCur===0){if(h<0.85)want=1;}
+    else if(_lodCur===1){if(h>1.2)want=0;else if(h<0.085)want=2;}
+    else if(h>0.12)want=1;
+    if(_lodCur===0&&h<0.085)want=2;
+  }
+  if(want===_lodCur&&earthB.m.geometry!==fpsGeoCoarse)return;
+  if(want===1&&!fpsGeoMid)fpsGeoMid=new TH.SphereGeometry(1,192,96);
+  if(want===2&&!fpsGeoFine)fpsGeoFine=new TH.SphereGeometry(1,FPS_SEG_W,FPS_SEG_H);
+  const g2=want===0?fpsGeoCoarse:want===1?fpsGeoMid:fpsGeoFine;
+  if(earthB.m.geometry!==g2)earthB.m.geometry=g2;
+  _lodCur=want;
+}
 function groundSync(){
+  earthLOD();
   const act=(fpsState==='stand'||fpsState==='fly')&&fpsAnchorLocal&&!PROF.off.ground;
   const a=act?(fpsState==='stand'?1:sm(0.78,1,(performance.now()-fpsFlyStart)/3000)):0;
   if(!gReq&&fpsState!=='off')gLoad();
@@ -839,11 +868,11 @@ locBtn.onclick=e=>{e.stopPropagation();
   locSt.textContent='Определяю местоположение…';
   navigator.geolocation.getCurrentPosition(p=>{locSt.textContent='';fpsSetObserver(p.coords.latitude,p.coords.longitude);},err=>{locSt.textContent='Не удалось определить. Выбери место тапом по Земле.';},{enableHighAccuracy:false,timeout:15000,maximumAge:600000});};
 
-const FPS_SEG_W=768,FPS_SEG_H=384;
+const FPS_SEG_W=384,FPS_SEG_H=192;   /* самый детальный уровень LOD Земли (раньше 768×384 = 588 тыс. треугольников) */
 const FPS_H_MIN=2e-5,FPS_H_MAX=6e-4;
 const FPS_H_DEFAULT=3e-5;
 let fpsHRel=FPS_H_DEFAULT;
-let fpsGeoFine=null,fpsGeoCoarse=null;
+let fpsGeoFine=null,fpsGeoCoarse=null,fpsGeoMid=null;
 let fpsState='off';
 const FPS_PITCH0=0.87;
 let fpsInfoSaved=null;
@@ -941,9 +970,7 @@ function enterFpsMode(){
   if(!cur||cur.k!=='earth')return;
   fpsInfoOff();
   if(!real){real=1;modeToggle.classList.add('real');apply();pick(ci);}
-  if(!fpsGeoFine)fpsGeoFine=new TH.SphereGeometry(1,FPS_SEG_W,FPS_SEG_H);
-  if(!fpsGeoCoarse)fpsGeoCoarse=earthB.m.geometry;
-  earthB.m.geometry=fpsGeoFine;
+  if(!fpsGeoCoarse)fpsGeoCoarse=earthB.m.geometry;   /* уровень детализации выбирает earthLOD() по высоте камеры */
   earthB._savedCastShadow=earthB.m.castShadow;
   earthB.m.castShadow=false;
   fpsSavedSpI=spI;
@@ -1010,16 +1037,18 @@ function computeFpsPose(outP,outQ){
   _fpM.makeBasis(_fpX,_fpY,_fpZ);
   outQ.setFromRotationMatrix(_fpM);
 }
-const _fpRay=new TH.Raycaster(),_fpNdc=new TH.Vector2();
+const _fpRay=new TH.Raycaster(),_fpNdc=new TH.Vector2(),_fpInv=new TH.Matrix4();
 function trySelectSurface(cx,cy){
   if(!earthB||!earthB.m)return;
   _fpNdc.set((cx/innerWidth)*2-1,-(cy/innerHeight)*2+1);
   _fpRay.setFromCamera(_fpNdc,C);
   earthB.m.updateWorldMatrix(true,false);
-  const hits=_fpRay.intersectObject(earthB.m,false);
-  if(!hits.length)return;
-  const p=hits[0].point.clone();
-  earthB.m.worldToLocal(p);
+  _fpInv.copy(earthB.m.matrixWorld).invert();
+  const _o=_fpRay.ray.origin.clone().applyMatrix4(_fpInv),_d=_fpRay.ray.direction.clone().transformDirection(_fpInv);
+  const _b=_o.dot(_d),_disc=_b*_b-(_o.lengthSq()-1);
+  if(_disc<0)return;
+  const _t=-_b-Math.sqrt(_disc);if(_t<0)return;
+  const p=_o.addScaledVector(_d,_t);
   if(p.lengthSq()<1e-12)return;
   p.normalize();
   fpsAnchorLocal=p;
@@ -1075,7 +1104,7 @@ camToggle.querySelectorAll('.opt').forEach(opt=>{opt.onclick=()=>{const m=parseI
 
 function refreshOrbitLines(){
   for(const b of bodies){
-    if(b.ln)b.ln.visible=orbitsVisible;
+    if(b.ln)b.ln.visible=orbitsVisible&&b.k!=='cer';
     if(b.mo)for(const p of b.mo){
       if(!p.userData.orbit)continue;
       const pb=cur.isMoon?cur.parent:cur;
@@ -1116,7 +1145,7 @@ document.addEventListener('webkitfullscreenchange',()=>{fsBtn.innerHTML=document
 bar.append(fsBtn);}
 apply();pick(0);enforceSpeedLimit();
 console.log('[phase] ready');
-function loop(now){requestAnimationFrame(loop);PROF.begin(now);const dt=Math.min((now-last)/1000,.05);last=now;_fFrames++;const _fElapsed=now-_fLast;if(_fElapsed>=500){fpsEl.textContent=Math.round(_fFrames*1000/_fElapsed)+' FPS · '+Q_LABEL;_fFrames=0;_fLast=now;}const s=SPEEDS[spI];tm+=dt*s;sunM.rotation.y+=dt*s*(2*PI)/25.05;const M=SUN_GLOW_BASE;if(real){glow.material.opacity=Math.min(1,(0.95+0.05*Math.sin(now/600))*M);gl2.material.opacity=Math.min(1,(0.88+0.05*Math.sin(now/700))*M);gl3.material.opacity=Math.min(1,(0.50+0.05*Math.sin(now/800))*M);gl4.material.opacity=Math.min(1,(0.28+0.04*Math.sin(now/900))*M);gl5.material.opacity=Math.min(1,(0.15+0.03*Math.sin(now/1100))*M);}else{glow.material.opacity=Math.min(1,(0.85+0.10*Math.sin(now/600))*M);gl2.material.opacity=Math.min(1,0.55*M);gl3.material.opacity=Math.min(1,(0.28+0.04*Math.sin(now/900))*M);gl4.material.opacity=Math.min(1,(0.16+0.03*Math.sin(now/1000))*M);gl5.material.opacity=Math.min(1,(0.09+0.02*Math.sin(now/1200))*M);}{const distSun=C.position.distanceTo(sunM.position);const minPx=3;const minAng=minPx*(C.fov*PI/180)/innerHeight;const sunRvis=Math.max(sunBaseScale,distSun*minAng*0.5);sunM.scale.setScalar(sunRvis);const refDist=real?AU_TO_UNITS*3:40;const grow=1+Math.min(distSun/refDist,2);const glFarScale=Math.max(sunM.scale.x*1.5,distSun*0.04*grow);glFar.scale.set(glFarScale,glFarScale,1);const bBase=real?0.38:0.26;const bMul=1+Math.min(distSun/refDist,2);const pulse=(real?0.06:0.04)*Math.sin(now/700);glFar.material.opacity=Math.max(0,Math.min(1,(bBase*bMul+pulse)*M));}place();for(const b of bodies){if(b.ln)b.ln.visible=orbitsVisible;}updateLocalOrbit();for(const b of bodies){if(b.isRoot||b.isSun)continue;const rc=(2*PI)/(ROT_DAYS[b.k]||1);b.m.rotation.y+=dt*s*rc;if(b===earthB)b.m.rotation.y=earthSpinAngle(tm);if(b.cloudsMesh)b.cloudsMesh.rotation.y=b.m.rotation.y*1.06+.7;if(b.vatm)b.vatm.rotation.y=b.m.rotation.y*1.15+.3;for(const p of b.mo)p.rotation.y=p.userData.ph+tm*(2*PI)/p.userData.orbPeriod;if(b.ringMesh)b.ringMesh.rotation.z+=dt*s*0.08;}
+function loop(now){requestAnimationFrame(loop);PROF.begin(now);const dt=Math.min((now-last)/1000,.05);last=now;_fFrames++;const _fElapsed=now-_fLast;if(_fElapsed>=500){fpsEl.textContent=Math.round(_fFrames*1000/_fElapsed)+' FPS · '+Q_LABEL;_fFrames=0;_fLast=now;}const s=SPEEDS[spI];tm+=dt*s;sunM.rotation.y+=dt*s*(2*PI)/25.05;const M=SUN_GLOW_BASE;if(real){glow.material.opacity=Math.min(1,(0.95+0.05*Math.sin(now/600))*M);gl2.material.opacity=Math.min(1,(0.88+0.05*Math.sin(now/700))*M);gl3.material.opacity=Math.min(1,(0.50+0.05*Math.sin(now/800))*M);gl4.material.opacity=Math.min(1,(0.28+0.04*Math.sin(now/900))*M);gl5.material.opacity=Math.min(1,(0.15+0.03*Math.sin(now/1100))*M);}else{glow.material.opacity=Math.min(1,(0.85+0.10*Math.sin(now/600))*M);gl2.material.opacity=Math.min(1,0.55*M);gl3.material.opacity=Math.min(1,(0.28+0.04*Math.sin(now/900))*M);gl4.material.opacity=Math.min(1,(0.16+0.03*Math.sin(now/1000))*M);gl5.material.opacity=Math.min(1,(0.09+0.02*Math.sin(now/1200))*M);}{const distSun=C.position.distanceTo(sunM.position);const minPx=3;const minAng=minPx*(C.fov*PI/180)/innerHeight;const sunRvis=Math.max(sunBaseScale,distSun*minAng*0.5);sunM.scale.setScalar(sunRvis);const refDist=real?AU_TO_UNITS*3:40;const grow=1+Math.min(distSun/refDist,2);const glFarScale=Math.max(sunM.scale.x*1.5,distSun*0.04*grow);glFar.scale.set(glFarScale,glFarScale,1);const bBase=real?0.38:0.26;const bMul=1+Math.min(distSun/refDist,2);const pulse=(real?0.06:0.04)*Math.sin(now/700);glFar.material.opacity=Math.max(0,Math.min(1,(bBase*bMul+pulse)*M));}place();for(const b of bodies){if(b.ln)b.ln.visible=orbitsVisible&&b.k!=='cer';}updateLocalOrbit();for(const b of bodies){if(b.isRoot||b.isSun)continue;const rc=(2*PI)/(ROT_DAYS[b.k]||1);b.m.rotation.y+=dt*s*rc;if(b===earthB)b.m.rotation.y=earthSpinAngle(tm);if(b.cloudsMesh)b.cloudsMesh.rotation.y=b.m.rotation.y*1.06+.7;if(b.vatm)b.vatm.rotation.y=b.m.rotation.y*1.15+.3;for(const p of b.mo)p.rotation.y=p.userData.ph+tm*(2*PI)/p.userData.orbPeriod;if(b.ringMesh)b.ringMesh.rotation.z+=dt*s*0.08;}
 if(!real){belts.forEach((bt,k)=>{bt.rotation.y=tm*bt.userData.w;bms[k].rotation.y=bt.rotation.y;});kbs.forEach(k=>{k.rotation.y=tm*k.userData.w;});}
 {const camAU=C.position.length()/AU_TO_UNITS;if(!real){belts.forEach((bt,k)=>{bms[k].material.opacity=0.36;});kbs.forEach((kb,k)=>{kb.material.opacity=0.48;});}else{belts.forEach((bt,k)=>{const dAU=Math.abs(camAU-BC[k].c);const fade=Math.max(0.05,Math.min(1,1-(dAU-3)/17));bms[k].material.opacity=0.36*fade;});kbs.forEach((kb,k)=>{const dAU=Math.abs(camAU-KC[k].c);const fade=Math.max(0.05,Math.min(1,1-(dAU-3)/17));kb.material.opacity=0.48*fade;});}}
 {
