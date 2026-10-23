@@ -15,6 +15,7 @@
 <script src="shaders/shaders.js?v=1"></script>
 <script src="data/stars.js?v=1"></script>
 <script src="data/constellations.js?v=1"></script>
+<script src="js/ephemeris.js?v=1"></script>
 <script src="lang/uk.js?v=1"></script>
 <script src="lang/en.js?v=1"></script>
 <script>
@@ -162,7 +163,7 @@ const sunLight=new TH.PointLight(0xfff1de,3,0,1);sunLight.castShadow=true;
 const SHADOW_MAP_SIZE=(m=>m?Math.min(+m[1],renderer.capabilities.maxTextureSize):Q.shadowSize)(location.hash.match(/[#&]shadow=(\d{3,4})/));
 sunLight.shadow.mapSize.set(SHADOW_MAP_SIZE,SHADOW_MAP_SIZE);
 /* Карта теней зависит только от положений тел (а не от камеры), поэтому её не нужно перерисовывать каждый кадр: обновляем, когда время симуляции сдвинулось на SH_DT суток или что-то изменилось (shDirty). #shadowlive в адресе — старое поведение (каждый кадр). */
-let shDirty=true,shLastTm=NaN,_shAllowed=true,shUpdN=0;const SH_DT=0.004,SHADOW_CACHE=!/[#&]shadowlive/.test(location.hash);
+let shDirty=true,shLastTm=NaN,_shAllowed=true,shUpdN=0,shWall=0;const SH_MIN_MS=50,SH_DT=0.004,SHADOW_CACHE=!/[#&]shadowlive/.test(location.hash);
 sunLight.shadow.bias=-0.0005;sunLight.shadow.radius=3;sunLight.shadow.normalBias=0.015;
 console.log(`[shadow] mapSize=${SHADOW_MAP_SIZE}`);
 const ambLight=new TH.AmbientLight(0x2a3050,0.35);
@@ -354,6 +355,27 @@ function updateLocalOrbit(){
 }
 const setPl=(b,f)=>{if(b.axes){b.m.scale.set(f*b.axes[0],f*b.axes[1],f*b.axes[2]);return;}const q=b.flat||0,a=f/Math.cbrt(1-q);b.m.scale.set(a,a*(1-q),a);};
 function sunLightSetup(base){if(real){sunLight.decay=0;sunLight.distance=0;sunLight.userData.fm=1;sunLight.intensity=base;return;}const ds=bodies.filter(b=>b.au),me=ds.find(b=>b.n==='Меркурий'),d=b=>real?b.au*AU_TO_UNITS:b.a0,dFar=Math.max(...ds.map(b=>d(b)*(1+b.ecc))),dRef=d(me),D=(dFar-.1*dRef)/.9;sunLight.decay=1;sunLight.distance=D;sunLight.userData.fm=1-dRef/D;sunLight.intensity=base/sunLight.userData.fm;}
+/*LOD-BEGIN*/
+/* LOD сфер по экранному размеру: дальние планеты, атмосферы, облака и спутники рисуются сферой с меньшим числом сегментов (геометрии общие). Earth не трогаем в режиме прогулки (там свой LOD). */
+const LOD_T1=40,LOD_T2=12,LOD_K=1.25,_lodCache=new Map(),_lodW=new TH.Vector3();
+function lodWant(px,cur){const w=px>=LOD_T1?0:px>=LOD_T2?1:2;
+  if(w>cur&&px>(cur===0?LOD_T1:LOD_T2)/LOD_K)return cur;
+  if(w<cur&&px<(cur===2?LOD_T2:LOD_T1)*LOD_K)return cur;
+  return w;}
+function lodSwap(mesh,want){const u=mesh.userData;let lb=u.lodBase;
+  if(!lb){const g=mesh.geometry,p=g&&g.type==='SphereGeometry'&&g.parameters;if(!p){u.lodBase=lb={skip:true};}else u.lodBase=lb={skip:false,geo0:g,r:p.radius,w:p.widthSegments,h:p.heightSegments,cur:0};}
+  if(lb.skip||lb.cur===want)return false;
+  let g;if(want===0)g=lb.geo0;else{const f=want===1?2:4,w=Math.max(8,Math.round(lb.w/f)),h=Math.max(6,Math.round(lb.h/f)),key=lb.r.toFixed(6)+'|'+w+'|'+h;g=_lodCache.get(key);if(!g){g=new TH.SphereGeometry(lb.r,w,h);_lodCache.set(key,g);}}
+  mesh.geometry=g;lb.cur=want;return true;}
+function lodPx(pos,R){const d=Math.max(1e-9,pos.distanceTo(C.position));return R*innerHeight/(2*Math.tan(C.fov*PI/360)*d);}
+function lodUpdate(){let ch=false;
+  for(const b of bodies){if(!b.m||b.isRoot||b.isSun)continue;
+    if(b===earthB&&fpsState!=='off')continue;
+    const px=lodPx(b.g.position,b.m.matrixWorld.getMaxScaleOnAxis()),u=b.m.userData.lodBase,w=lodWant(px,u&&!u.skip?u.cur:0);
+    ch=lodSwap(b.m,w)||ch;if(b.cloudsMesh)lodSwap(b.cloudsMesh,w);if(b.vatm)lodSwap(b.vatm,w);if(b.atm)lodSwap(b.atm,w);
+    for(const p of b.mo){const mm=p.children[0];if(!mm)continue;mm.getWorldPosition(_lodW);const mu=mm.userData.lodBase,mw=lodWant(lodPx(_lodW,mm.matrixWorld.getMaxScaleOnAxis()),mu&&!mu.skip?mu.cur:0);ch=lodSwap(mm,mw)||ch;}}
+  if(ch)shDirty=true;}
+/*LOD-END*/
 function apply(){shDirty=true;let sunScale;if(real){sunScale=SUN_REAL_KM/KM_PER_UNIT;sunLightSetup(LIGHT_BASE_SUN*LIGHT_MUL_REAL);sunLight.castShadow=false;ambLight.intensity=LIGHT_BASE_AMB*LIGHT_MUL_REAL;}else{sunScale=8;sunLightSetup(2.6*SIM_LIGHT_MUL);sunLight.castShadow=true;ambLight.intensity=0.40*SIM_LIGHT_MUL;}sunBaseScale=sunScale;sunM.scale.setScalar(sunScale);if(real){glow.scale.set(sunScale*12,sunScale*12,1);gl2.scale.set(sunScale*35,sunScale*35,1);gl3.scale.set(sunScale*70,sunScale*70,1);gl4.scale.set(sunScale*140,sunScale*140,1);gl5.scale.set(sunScale*280,sunScale*280,1);glow.material.opacity=1.0;gl2.material.opacity=0.95;gl3.material.opacity=0.55;gl4.material.opacity=0.32;gl5.material.opacity=0.18;}else{glow.scale.set(sunScale*7,sunScale*7,1);gl2.scale.set(sunScale*21,sunScale*21,1);gl3.scale.set(sunScale*45,sunScale*45,1);gl4.scale.set(sunScale*90,sunScale*90,1);gl5.scale.set(sunScale*160,sunScale*160,1);glow.material.opacity=0.9;gl2.material.opacity=0.55;gl3.material.opacity=0.30;gl4.material.opacity=0.18;gl5.material.opacity=0.10;}glFar.scale.set(sunScale*30,sunScale*30,1);glFar.material.opacity=0.4;
 for(const b of bodies){if(b.isRoot||b.isSun)continue;b.a=real?b.au*AU_TO_UNITS:b.baseA0;const e=b.ecc||0;const segs=real?4096:512;const pts=[];for(let i=0;i<=segs;i++){const M=i/segs*2*PI;let E=M;for(let k=0;k<5;k++)E=M+e*Math.sin(E);pts.push(new TH.Vector3(b.a*(Math.cos(E)-e),0,-b.a*Math.sqrt(Math.max(0,1-e*e))*Math.sin(E)));}b.ln.geometry.dispose();b.ln.geometry=new TH.BufferGeometry().setFromPoints(pts);b.ln.scale.set(1,1,1);b.ln.material.depthWrite=false;b.ln.renderOrder=-1;b.ln.material.opacity=real?0.22:0.32;if(real){const f=b.kmR/KM_PER_UNIT;setPl(b,f);if(b.atm)b.atm.scale.setScalar(f);if(b.cloudsMesh)b.cloudsMesh.scale.setScalar(f*1.006);if(b.vatm)b.vatm.scale.setScalar(f*1.015);if(b.ringMesh)b.ringMesh.scale.setScalar(f);b.mo.forEach(p=>{const ud=p.userData;const dist=(ud.mdist||384400)/KM_PER_UNIT;p.children[0].scale.setScalar((ud.mkm||1737)/KM_PER_UNIT);p.children[0].position.x=dist;if(ud.orbit){const pts=[];for(let i=0;i<=128;i++){const t=i/128*2*PI;pts.push(new TH.Vector3(Math.cos(t)*dist,0,Math.sin(t)*dist));}ud.orbit.geometry.dispose();ud.orbit.geometry=new TH.BufferGeometry().setFromPoints(pts);}});b.r=f;}else{setPl(b,b.baseR0);if(b.atm)b.atm.scale.setScalar(b.baseR0);if(b.cloudsMesh)b.cloudsMesh.scale.setScalar(b.baseR0*1.012);if(b.vatm)b.vatm.scale.setScalar(b.baseR0*1.02);if(b.ringMesh)b.ringMesh.scale.setScalar(b.baseR0);b.mo.forEach(p=>{const ud=p.userData;p.children[0].scale.setScalar(ud.mr);p.children[0].position.x=ud.d;if(ud.orbit){const pts=[];for(let i=0;i<=128;i++){const t=i/128*2*PI;pts.push(new TH.Vector3(Math.cos(t)*ud.d,0,Math.sin(t)*ud.d));}ud.orbit.geometry.dispose();ud.orbit.geometry=new TH.BufferGeometry().setFromPoints(pts);}});b.r=b.baseR0;}
 b.baseMScale=b.m.scale.clone();
@@ -454,51 +476,10 @@ setMenu.innerHTML='<div class="section"><div class="section-label">Скорос�
 document.body.append(setMenu);
 setMenu.querySelectorAll('#langSeg button').forEach(b=>{b.classList.toggle('on',b.dataset.lang===SW_LANG);b.onclick=e=>{e.stopPropagation();try{localStorage.setItem('sw-lang',b.dataset.lang);}catch(err){}location.reload();};});
 
-const DEG=PI/180,EPS0=23.4393;
-function earthOrbitAt(tm){const T=tm/36525,w=102.93768193+0.32327364*T,L=100.46457166+35999.37244981*T;return{M:(((L-w)*DEG)%(2*PI)+2*PI)%(2*PI),e:0.01671123-0.00004392*T,rotY:(w-270)*DEG};}
-function earthSpinAngle(tm){const era=2*PI*(0.7790572732640+1.00273781191135448*tm);return(((era%(2*PI))+2*PI)%(2*PI))+PI/2;}
+if(!window.SW_EPH)throw new Error('js/ephemeris.js не загрузился');
+const {DEG,EPS0,PLE,PLE2,PLE2B,earthOrbitAt,earthSpinAngle,eph,helioEcl,planetGeoEcl,moonGeoEcl}=window.SW_EPH;
 const latLonToAnchor=(la,lo)=>new TH.Vector3(Math.cos(la)*Math.cos(lo),Math.sin(la),-Math.cos(la)*Math.sin(lo));
 const anchorToLatLon=p=>[Math.asin(Math.max(-1,Math.min(1,p.y))),Math.atan2(-p.z,p.x)];
-const PLE={mer:[0.38709927,0.00000037,0.20563593,0.00001906,7.00497902,-0.00594749,252.25032350,149472.67411175,77.45779628,0.16047689,48.33076593,-0.12534081],
-ven:[0.72333566,0.00000390,0.00677672,-0.00004107,3.39467605,-0.00078890,181.97909950,58517.81538729,131.60246718,0.00268329,76.67984255,-0.27769418],
-earth:[1.00000261,0.00000562,0.01671123,-0.00004392,-0.00001531,-0.01294668,100.46457166,35999.37244981,102.93768193,0.32327364,0,0],
-mars:[1.52371034,0.00001847,0.09339410,0.00007882,1.84969142,-0.00813131,-4.55343205,19140.30268499,-23.94362959,0.44441088,49.55953891,-0.29257343],
-jup:[5.20288700,-0.00011607,0.04838624,-0.00013253,1.30439695,-0.00183714,34.39644051,3034.74612775,14.72847983,0.21252668,100.47390909,0.20469106],
-sat:[9.53667594,-0.00125060,0.05386179,-0.00050991,2.48599187,0.00193609,49.95424423,1222.49362201,92.59887831,-0.41897216,113.66242448,-0.28867794],
-ura:[19.18916464,-0.00196176,0.04725744,-0.00004397,0.77263783,-0.00242939,313.23810451,428.48202785,170.95427630,0.40805281,74.01692503,0.04240589],
-nep:[30.06992276,0.00026291,0.00859048,0.00005105,1.77004347,0.00035372,-55.12002969,218.45945325,44.96476227,-0.32241464,131.78422574,-0.00508664]};
-/* Плутон: JPL (Standish), Table 1, 1800–2050 (вне диапазона — экстраполяция). */
-PLE.plu=[39.48211675,-0.00031596,0.24882730,0.00005170,17.14001206,0.00004818,238.92903833,145.20780515,224.06891629,-0.04062942,110.30393684,-0.01183482];
-/* JPL Table 2a (3000 до н.э. – 3000 н.э.) и Table 2b (поправки к M для Юпитера–Нептуна): [a,a',e,e',I,I',L,L',ϖ,ϖ',Ω,Ω'] */
-/* Карликовые планеты: JPL Small-Body Database, оскулирующие элементы на эпоху JD 2461200.5 (2026-06-09 TDB), гелиоцентрические, эклиптика J2000.
-   Средняя аномалия и скорость взяты из M и n; поправок на возмущения нет — точность лучше всего вблизи 2026 г. и падает с удалением от эпохи. */
-PLE.cer=[2.765552595034094,0,0.07969229514816586,0,10.58802780183462,0,158.74556449,7827.47005993,153.54284135,0,80.24862682043221,0];
-PLE.hau=[43.06029023650952,0,0.1944430148898797,0,28.20847393040364,0,192.00768762,127.40276965,2.47660338,0,121.7860561329425,0];
-PLE.mak=[45.57093317300052,0,0.1588889953992523,0,29.02785603743067,0,155.39032853,117.02062563,16.38710716,0,79.2948338209406,0];
-PLE.eri=[67.93394687853566,0,0.4382385347971672,0,43.9258279471791,0,21.57805595,64.29304982,186.79969403,0,36.00477044417249,0];
-const PLE2={
-mer:[0.38709843,0.00000000,0.20563661,0.00002123,7.00559432,-0.00590158,252.25166724,149472.67486623,77.45771895,0.15940013,48.33961819,-0.12214182],
-ven:[0.72332102,-0.00000026,0.00676399,-0.00005107,3.39777545,0.00043494,181.97970850,58517.81560260,131.76755713,0.05679648,76.67261496,-0.27274174],
-earth:[1.00000018,-0.00000003,0.01673163,-0.00003661,-0.00054346,-0.01337178,100.46691572,35999.37306329,102.93005885,0.31795260,-5.11260389,-0.24123856],
-mars:[1.52371243,0.00000097,0.09336511,0.00009149,1.85181869,-0.00724757,-4.56813164,19140.29934243,-23.91744784,0.45223625,49.71320984,-0.26852431],
-jup:[5.20248019,-0.00002864,0.04853590,0.00018026,1.29861416,-0.00322699,34.33479152,3034.90371757,14.27495244,0.18199196,100.29282654,0.13024619],
-sat:[9.54149883,-0.00003065,0.05550825,-0.00032044,2.49424102,0.00451969,50.07571329,1222.11494724,92.86136063,0.54179478,113.63998702,-0.25015002],
-ura:[19.18797948,-0.00020455,0.04685740,-0.00001550,0.77298127,-0.00180155,314.20276625,428.49512595,172.43404441,0.09266985,73.96250215,0.05739699],
-nep:[30.06952752,0.00006447,0.00895439,0.00000818,1.77005520,0.00022400,304.22289287,218.46515314,46.68158724,0.01009938,131.78635853,-0.00606302]};
-const PLE2B={jup:[-0.00012452,0.06064060,-0.35635438,38.35125],sat:[0.00025899,-0.13434469,0.87320147,38.35125],ura:[0.00058331,-0.97731848,0.17689245,7.67025],nep:[-0.00041348,0.68346318,-0.10162547,7.67025]};
-/* Элементы на момент T (юлианских столетий от J2000): в 1800–2050 — Table 1, иначе Table 2a(+2b). Углы в радианах. */
-function eph(k,T){const o=(T<-2||T>0.5)&&PLE2[k]?1:0,q=o?PLE2[k]:PLE[k];const e=q[2]+q[3]*T,I=q[4]+q[5]*T,L=q[6]+q[7]*T,w=q[8]+q[9]*T,O=q[10]+q[11]*T;let M=L-w;
- if(o&&PLE2B[k]){const x=PLE2B[k];M+=x[0]*T*T+x[1]*Math.cos(x[3]*T*DEG)+x[2]*Math.sin(x[3]*T*DEG);}
- return{a:q[0]+q[1]*T,e,I:I*DEG,O:O*DEG,w:w*DEG,M:M*DEG};}
-function helioEcl(k,tm){const el=eph(k,tm/36525),a=el.a,e=el.e,I=el.I,O=el.O,om=el.w-O;
- let M=((el.M%(2*PI))+3*PI)%(2*PI)-PI,E=M+e*Math.sin(M);for(let i=0;i<8;i++)E-=(E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
- const xp=a*(Math.cos(E)-e),yp=a*Math.sqrt(1-e*e)*Math.sin(E),co=Math.cos(om),so=Math.sin(om),cO=Math.cos(O),sO=Math.sin(O),cI=Math.cos(I),sI=Math.sin(I);
- return[(co*cO-so*sO*cI)*xp+(-so*cO-co*sO*cI)*yp,(co*sO+so*cO*cI)*xp+(-so*sO+co*cO*cI)*yp,so*sI*xp+co*sI*yp];}
-function planetGeoEcl(k,tm){const p=helioEcl(k,tm),e=helioEcl('earth',tm);return[p[0]-e[0],p[1]-e[1],p[2]-e[2]];}
-function moonGeoEcl(tm){const T=tm/36525,r=x=>(((x%360)+360)%360)*DEG,Lp=218.3164477+481267.88123421*T,D=r(297.8501921+445267.1114034*T),M=r(357.5291092+35999.0502909*T),Mp=r(134.9633964+477198.8675055*T),F=r(93.2720950+483202.0175233*T),s=Math.sin;
- const lon=Lp+6.288774*s(Mp)+1.274027*s(2*D-Mp)+0.658314*s(2*D)+0.213618*s(2*Mp)-0.185116*s(M)-0.114332*s(2*F)+0.058793*s(2*D-2*Mp)+0.057066*s(2*D-M-Mp)+0.053322*s(2*D+Mp)+0.045758*s(2*D-M)-0.040923*s(M-Mp)-0.034720*s(D)-0.030383*s(M+Mp)+0.015327*s(2*D-2*F)-0.012528*s(Mp+2*F)-0.010980*s(Mp-2*F)+0.010675*s(4*D-Mp)+0.010034*s(3*Mp)+0.008548*s(4*D-2*Mp);
- const lat=5.128122*s(F)+0.280602*s(Mp+F)+0.277693*s(Mp-F)+0.173237*s(2*D-F)+0.055413*s(2*D-Mp+F)+0.046271*s(2*D-Mp-F)+0.032573*s(2*D+F)+0.017198*s(2*Mp+F)+0.009266*s(2*D+Mp-F)+0.008823*s(2*Mp-F)+0.008247*s(2*D-M-F);
- const lo=(lon-1.3969713*T)*DEG,la=lat*DEG;return[Math.cos(la)*Math.cos(lo),Math.cos(la)*Math.sin(lo),Math.sin(la)];}
 const ecl2w=v=>new TH.Vector3(-v[1],v[2],-v[0]);
 EPH=PLE;for(const b of bodies){const q=EPH[b.k];if(q&&b!==earthB)b.ecc=q[2];}earthB.absM=function(t){const o=earthOrbitAt(t);this.rotY=o.rotY;this.ln.rotation.y=o.rotY;return o.M;};
 earthB.tilt=EPS0;earthB.tg.rotation.z=EPS0*DEG;if(earthB.atm)earthB.atm.rotation.z=EPS0*DEG;
@@ -536,8 +517,9 @@ const mk=(label,fn)=>{const b=document.createElement('button');b.type='button';b
  const closeB=mk('✕',()=>{P.set(false);const c=document.getElementById('profChk');if(c)c.checked=false;});closeB.title='Скрыть профайлер';
 const rest={sky:()=>{},dome:()=>{},msw:()=>{if(skySphere)skySphere.visible=true;},clouds:()=>{if(earthB.cloudsMesh)earthB.cloudsMesh.visible=true;},vatm:()=>{if(earthB.vatm)earthB.vatm.visible=true;},sun:()=>{[glow,gl2,gl3,gl4,gl5,glFar].forEach(o=>{if(o)o.visible=true;});},shadows:()=>{},ground:()=>{}};
 const chips={};[['sky','Небо/звёзды'],['dome','Купол'],['msw','Млечный Путь'],['clouds','Облака'],['vatm','Атм.Земли'],['sun','Свет Солнца'],['shadows','Тени'],['ground','Фейк-земля']].forEach(([k,t])=>{chips[k]=mk(t,b=>{P.off[k]=!P.off[k];b.classList.toggle('off',P.off[k]);if(!P.off[k])rest[k]();});});
-const dprs=[0.5,0.75,1,1.5,2].filter(v=>v<=Math.max(1,devicePixelRatio||1)+1e-6);
-const dprB=mk('Разр.',b=>{let i=dprs.findIndex(v=>Math.abs(v-renderer.getPixelRatio())<0.01);i=(i+1)%dprs.length;renderer.setPixelRatio(dprs[i]);renderer.setSize(innerWidth,innerHeight);});
+const dprs=[...new Set([0.75,1,1.25,1.5,2,2.5,3,Math.round((devicePixelRatio||1)*100)/100])].sort((a,b)=>a-b);
+const dprB=mk('Разр.',b=>{let i=dprs.findIndex(v=>Math.abs(v-renderer.getPixelRatio())<0.01);i=(i+1)%dprs.length;renderer.setPixelRatio(dprs[i]);renderer.setSize(innerWidth,innerHeight);b.textContent='Разр. ×'+dprs[i];});
+dprB.textContent='Разр. ×'+(Math.round(renderer.getPixelRatio()*100)/100);
 mk('Сброс',()=>{dts.length=0;spikes.length=0;ms.l=ms.r=ms.p=ms.g=ms.gn=ms.n=ms.a=ms.b=ms.c=0;});
 const cpB=mk('Копировать отчёт',()=>{const t=reportText();const done=()=>{cpB.textContent='Скопировано ✓';setTimeout(()=>cpB.textContent='Копировать отчёт',1500);};if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(done,()=>fb(t,done));else fb(t,done);});
 function fb(t,done){const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;left:0;top:0;opacity:0';document.body.append(ta);ta.select();try{document.execCommand('copy');done();}catch(e){prompt('Скопируй отчёт:',t);}ta.remove();}
@@ -636,7 +618,9 @@ function upd(t){
       if(wantA&&!_shAllowed)shDirty=true;
       if(!wantA&&_shAllowed){renderer.shadowMap.needsUpdate=true;shUpdN++;}
       _shAllowed=wantA;
-      if(wantA&&sunLight.castShadow&&(shDirty||!(Math.abs(t-shLastTm)<=SH_DT))){renderer.shadowMap.needsUpdate=true;shLastTm=t;shDirty=false;shUpdN++;}}}
+      const nowW=performance.now();
+      /* по изменению состояния — сразу; по ходу времени — не чаще ~20 раз в секунду (на больших скоростях тень всё равно «размазана») */
+      if(wantA&&sunLight.castShadow&&(shDirty||(!(Math.abs(t-shLastTm)<=SH_DT)&&nowW-shWall>=SH_MIN_MS))){renderer.shadowMap.needsUpdate=true;shLastTm=t;shWall=nowW;shDirty=false;shUpdN++;}}}
   if(hide||_hid){_bodies.forEach(b=>{if(b.g)b.g.visible=!hide;if(b.ln)b.ln.visible=(hide?skyOrbits:orbitsVisible)&&b.k!=='cer';});earthB.mo.forEach(m=>{m.visible=!hide;});_hid=hide;}
   {if(fpsState!=='off'){earthB.ln.visible=false;LL.visible=false;_ekHid=true;}else if(_ekHid){_ekHid=false;earthB.ln.visible=orbitsVisible;LL.visible=!!llFor&&orbitsVisible;}}
   const he=helioEcl('earth',t);
@@ -1136,7 +1120,7 @@ if(skySphere){
     U.uSkyGamma.value=1;
   }
 }
-let sOf=null;{if(real){sOf=pos=>Math.min(1e4,Math.pow(1/Math.max(.02,pos/AU_TO_UNITS),0.5));}if(real||wasP){const sc=(mat,s)=>{if(!mat)return;const u=mat.userData,c0=u.c0||(u.c0=mat.color.clone());mat.color.copy(c0).multiplyScalar(s);if(!mat.emissiveMap){if(u.e0===undefined)u.e0=mat.emissiveIntensity;mat.emissiveIntensity=u.e0*s;}};for(const b of bodies){if(!b.m)continue;const s=real?sOf(b.g.position.length()):1;sc(b.m.material,s);if(b.cloudsMesh)sc(b.cloudsMesh.material,s);if(b.vatm)sc(b.vatm.material,s);if(b.ringMesh)sc(b.ringMesh.material,s);for(const p of b.mo)sc(p.children[0].material,s);}belts.forEach((bt,k)=>sc(bt.material,real?sOf(BC[k].c*AU_TO_UNITS):1));wasP=real;}}for(const b of bodies){if(!b.atm)continue;const U=b.atm.material.uniforms;U.uI.value=b.atm.userData.I0*(real?sOf(b.g.position.length()):Math.max(0,1-b.g.position.length()/sunLight.distance)/sunLight.userData.fm);const ta=-b.tilt*PI/180;U.uC.value.copy(C.position).sub(b.g.position).divideScalar(b.atm.scale.x).applyAxisAngle(ZA,ta);U.uS.value.copy(b.g.position).negate().normalize().applyAxisAngle(ZA,ta);}for(const b of bodies){if(!b.ringU||!b.ringMesh)continue;const R=b.ringU;R.uSun.value.copy(b.g.position).negate();R.uA.value=b.m.scale.x;R.uCc.value=b.m.scale.y;R.uS.value=b.ringMesh.scale.x;}SkyW.groundSync();PROF.r0();renderer.render(S,C);PROF.r1();PROF.m(0);updateLabels();PROF.m(1);updateHorizonLabels();PROF.m(2);SkyW.labels();PROF.end();}
+let sOf=null;{if(real){sOf=pos=>Math.min(1e4,Math.pow(1/Math.max(.02,pos/AU_TO_UNITS),0.5));}if(real||wasP){const sc=(mat,s)=>{if(!mat)return;const u=mat.userData,c0=u.c0||(u.c0=mat.color.clone());mat.color.copy(c0).multiplyScalar(s);if(!mat.emissiveMap){if(u.e0===undefined)u.e0=mat.emissiveIntensity;mat.emissiveIntensity=u.e0*s;}};for(const b of bodies){if(!b.m)continue;const s=real?sOf(b.g.position.length()):1;sc(b.m.material,s);if(b.cloudsMesh)sc(b.cloudsMesh.material,s);if(b.vatm)sc(b.vatm.material,s);if(b.ringMesh)sc(b.ringMesh.material,s);for(const p of b.mo)sc(p.children[0].material,s);}belts.forEach((bt,k)=>sc(bt.material,real?sOf(BC[k].c*AU_TO_UNITS):1));wasP=real;}}for(const b of bodies){if(!b.atm)continue;const U=b.atm.material.uniforms;U.uI.value=b.atm.userData.I0*(real?sOf(b.g.position.length()):Math.max(0,1-b.g.position.length()/sunLight.distance)/sunLight.userData.fm);const ta=-b.tilt*PI/180;U.uC.value.copy(C.position).sub(b.g.position).divideScalar(b.atm.scale.x).applyAxisAngle(ZA,ta);U.uS.value.copy(b.g.position).negate().normalize().applyAxisAngle(ZA,ta);}for(const b of bodies){if(!b.ringU||!b.ringMesh)continue;const R=b.ringU;R.uSun.value.copy(b.g.position).negate();R.uA.value=b.m.scale.x;R.uCc.value=b.m.scale.y;R.uS.value=b.ringMesh.scale.x;}lodUpdate();SkyW.groundSync();PROF.r0();renderer.render(S,C);PROF.r1();PROF.m(0);updateLabels();PROF.m(1);updateHorizonLabels();PROF.m(2);SkyW.labels();PROF.end();}
 await prog(100,'Готово');ld.classList.add('done');setTimeout(()=>ld.remove(),800);requestAnimationFrame(loop);
 }catch(e){showError('[fatal] '+(e&&e.message||e));lt.textContent=TR('Ошибка загрузки:')+' '+(e&&e.message||e);console.error(e);}
 })();
