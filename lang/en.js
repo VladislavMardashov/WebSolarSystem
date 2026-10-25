@@ -91,6 +91,8 @@ SW_I18N.en={
 "Датчики ориентации недоступны":"Orientation sensors are unavailable",
 "Для датчиков нужен https":"Sensors require https",
 "Нет доступа к датчикам":"Sensor access denied",
+"Вид выровнен":"View aligned",
+"Компас недоступен — направление может дрейфовать. Долгое нажатие на кнопку = калибровка.":"Compass unavailable — heading may drift. Long-press the button to recalibrate.",
 "Профайлер (временный)":"Profiler (temporary)",
 "Выбери место наблюдения:":"Pick an observation spot:",
 "тапни по Земле":"tap the Earth",

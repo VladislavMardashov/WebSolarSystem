@@ -161,5 +161,7 @@ body.fps-on #bar .dd{display:none}
 #gyroBtn{width:42px;height:42px;padding:0;display:none;align-items:center;justify-content:center;border-radius:12px;flex:none}
 body.has-gyro.fps-sky #gyroBtn{display:flex}
 #gyroBtn.on{background:var(--acc);color:#111;border-color:var(--acc)}
+#gyroBtn.on.abs{box-shadow:0 0 0 2px #3d9e5a}
+#gyroBtn.on.rel{box-shadow:0 0 0 2px #c9a227}
 #toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100vw - 32px);background:#0c101c;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:9px 14px;font-size:13px;color:var(--fg);z-index:90;opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.show{opacity:1}
