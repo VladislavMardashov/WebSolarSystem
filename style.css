@@ -8,7 +8,7 @@ button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 #setBtn svg{transition:transform .25s}
 #setBtn.open{background:var(--acc);color:#111;border-color:var(--acc)}
 #setBtn.open svg{transform:rotate(60deg)}
-#fps{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:8px;z-index:6;font:11px ui-monospace,monospace;color:var(--fg);opacity:.6;background:#0c101c;padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.1);pointer-events:none;user-select:none;min-width:96px;text-align:center;transition:opacity .3s}
+#fps{position:static;z-index:6;font:11px ui-monospace,monospace;color:var(--fg);opacity:.6;background:#0c101c;padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.1);pointer-events:none;user-select:none;min-width:96px;text-align:center;transition:opacity .3s}
 #skySimCtl{position:fixed;top:calc(40px + env(safe-area-inset-top,0px));left:8px;z-index:25;background:#0c101c;border:1px solid rgba(255,255,255,.18);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.5);padding:8px 10px;display:flex;align-items:center;gap:8px;font-size:11px;user-select:none}
 #skySimCtl label{opacity:.75;font-size:11px}
 #skySimCtl input[type=range]{width:120px;accent-color:var(--acc);cursor:pointer}
@@ -32,8 +32,10 @@ button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 .dd-item.moon{display:flex;align-items:baseline;gap:7px;padding-left:24px;font-size:.94em}
 .dd-item.moon .bl{opacity:.6}
 .dd-item.moon i{font-style:italic}
-#info{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;max-width:280px;background:#0c101c;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:10px 14px;font-size:13px;line-height:1.45;opacity:0;pointer-events:none;transition:opacity .35s;z-index:10}
-#info.show{opacity:1;pointer-events:auto}
+#topRight{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:8px;display:flex;flex-direction:column;align-items:flex-end;gap:6px;z-index:10;pointer-events:none}
+#info{position:static;max-width:280px;box-sizing:border-box;min-height:42px;background:#0c101c;border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:9px 14px;font-size:13px;line-height:1.45;display:none;pointer-events:none}
+@keyframes infoIn{from{opacity:0}to{opacity:1}}
+#info.show{display:block;pointer-events:auto;animation:infoIn .35s}
 #info .info-head{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none}
 #info h3{margin:0;font-size:15px;color:var(--acc)}
 #info .info-tri{font-size:11px;opacity:.7;transition:transform .2s}
@@ -78,13 +80,10 @@ button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 #settingsMenu .divider{height:1px;background:#1f232e;margin:2px 0}
 #fpsBtn{position:fixed;left:8px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:58;width:42px;height:42px;padding:0;display:none;align-items:center;justify-content:center;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:var(--chip);color:var(--fg);cursor:pointer;font-size:19px;line-height:1;font-family:inherit}
 #fpsBtn.show{display:flex}
-#consBtn{position:fixed;left:8px;bottom:calc(108px + env(safe-area-inset-bottom,0px));z-index:58;width:42px;height:42px;padding:0;display:none;align-items:center;justify-content:center;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:var(--chip);color:var(--fg);cursor:pointer;font-size:19px;line-height:1;font-family:inherit}
-.con-label{position:fixed;pointer-events:none;transform:translate(-50%,-50%);font:700 15px system-ui,sans-serif;color:#b8e4ff;text-shadow:0 1px 4px #000,0 0 10px rgba(0,0,0,.9);opacity:0;z-index:6;white-space:nowrap}
-.con-label.show{opacity:1}
-.sky-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#consBtn{position:fixed;left:8px;bottom:calc(108px + env(safe-area-inset-bottom,0px));z-index:58;width:42px;height:42px;padding:0;display:none;align-items:center;justify-content:center;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:var(--chip);color:var(--fg);cursor:pointer;font-size:19px;line-height:1;font-family:inherit}.sky-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sky-in{width:100%;box-sizing:border-box;background:#1b1e2a;color:var(--fg);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:7px 8px;font:inherit;font-size:12px;color-scheme:dark}
 .sky-btn{margin-top:6px;width:100%;border:1px solid rgba(255,255,255,.15);background:#1b1e2a;color:var(--fg);border-radius:8px;padding:7px;font:inherit;font-size:12px;cursor:pointer}
-#skyHud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:5;pointer-events:none;font:12px/1.3 system-ui,sans-serif;color:rgba(255,255,255,.8);text-shadow:0 1px 3px #000;white-space:nowrap}
+#skyHud{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:5;pointer-events:none;font:12px/1.3 system-ui,sans-serif;color:rgba(255,255,255,.8);text-shadow:0 1px 3px #000;max-width:calc(100vw - 120px);text-align:center}
 body.fps-stand .label{display:none!important}
 
 #layersMenu{position:fixed;left:8px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:55;display:flex;flex-direction:column;gap:10px;background:#0c101c;border:1px solid rgba(255,255,255,.18);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.6);padding:12px;min-width:290px;opacity:0;visibility:hidden;transform:translateY(8px) scale(.98);transition:opacity .18s,transform .18s,visibility 0s linear .18s;pointer-events:none}
@@ -129,7 +128,7 @@ body.fps-stand .label{display:none!important}
 #layersMenu{bottom:auto;top:calc(58px + env(safe-area-inset-top,0px));left:8px;min-width:232px;transform-origin:top left;transform:translateY(-6px) scale(.97)}
 #layersBtn{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:8px;z-index:58;width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px}
 #layersBtn.open{background:var(--acc);color:#111;border-color:var(--acc)}
-#fps{left:58px!important}
+
 #skySimCtl{top:calc(58px + env(safe-area-inset-top,0px))!important}
 #info{max-width:min(280px,calc(100vw - 74px))!important}
 body.no-compass .horizon-label{display:none!important}
@@ -154,3 +153,13 @@ body.fps-stand canvas{cursor:grab}
 #errPanel .h{font-weight:600;margin-bottom:4px;cursor:pointer;user-select:none}
 #errPanel .line{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.15)}
 #errPanel .line:last-child{border-bottom:none}
+
+/* режим небосвода (прогулка): выбор цели недоступен */
+body.fps-on #bar .dd{display:none}
+
+/* кнопка гироскопа: справа от кнопки настроек, только на телефоне и только в режиме небосвода */
+#gyroBtn{width:42px;height:42px;padding:0;display:none;align-items:center;justify-content:center;border-radius:12px;flex:none}
+body.has-gyro.fps-sky #gyroBtn{display:flex}
+#gyroBtn.on{background:var(--acc);color:#111;border-color:var(--acc)}
+#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100vw - 32px);background:#0c101c;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:9px 14px;font-size:13px;color:var(--fg);z-index:90;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
