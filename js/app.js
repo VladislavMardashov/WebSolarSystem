@@ -1685,7 +1685,9 @@ const minPix = 3;
       const [a, b] = [...pt.values()];
       return Math.hypot(a[0] - b[0], a[1] - b[1]);
     };
+    let gyroDragAcc = 0;
     el.addEventListener('pointerdown', e => {
+      gyroDragAcc = 0;
       el.setPointerCapture(e.pointerId);
       pt.set(e.pointerId, [e.clientX, e.clientY]);
       pd = pinch();
@@ -1708,7 +1710,8 @@ const minPix = 3;
           return;
         }
         if (fpsState === 'stand' && pt.size === 1) {
-          if (gyro.on && Math.abs(_dx) + Math.abs(_dy) > 8) gyroStop();
+          gyroDragAcc += Math.hypot(_dx, _dy);
+          if (gyro.on && gyroDragAcc > 8) gyroStop();
           fpsYaw -= _dx * 0.0035;
           fpsPitch = Math.max(-1.45, Math.min(1.45, fpsPitch + _dy * 0.0035));
         }
@@ -3712,7 +3715,7 @@ const minPix = 3;
         if (namesOn)
           for (let k = 0; k < CS.length; k++) {
             if (CS[k].c.dot(_U) < -0.05) continue;
-            put(CS[k].p, CON_NAMES[k], '#8fc3f2', 0, '#ffffff', k === shown ? hA : 0);
+            put(CS[k].p, CON_NAMES[k], '#e8b53f', 0, '#fff0b8', k === shown ? hA : 0);
           }
         if (starNm)
           for (let i = 0; i < SNM.length; i++) {
@@ -4804,8 +4807,9 @@ const minPix = 3;
       if (a < 0) a += 2 * PI;
       return a - PI;
     };
-    /* углы датчика (W3C: alpha, beta, gamma, градусы) и поворот экрана → азимут (от севера к востоку), высота и крен вида в системе Восток-Север-Зенит */
-    function orientToView(aD, bD, gD, sD) {
+    /* углы датчика (W3C: alpha, beta, gamma, градусы) и поворот экрана → оси камеры в системе Восток-Север-Зенит:
+       right — вправо по экрану, up — вверх по экрану, f — направление взгляда («в экран») */
+    function orientBasis(aD, bD, gD, sD) {
       const r = PI / 180,
         a = aD * r,
         b = bD * r,
@@ -4821,10 +4825,16 @@ const minPix = 3;
       const X = [ca * cg - sa * sb * sg, sa * cg + ca * sb * sg, -cb * sg],
         Y = [-sa * cb, ca * cb, sb],
         Z = [ca * sg + sa * sb * cg, sa * sg - ca * sb * cg, cb * cg];
-      const f = [-Z[0], -Z[1], -Z[2]]; /* куда смотрим — «в экран» */
       const cs = Math.cos(s),
         sn = Math.sin(s);
-      const up = [X[0] * sn + Y[0] * cs, X[1] * sn + Y[1] * cs, X[2] * sn + Y[2] * cs]; /* «верх» экрана с учётом его поворота */
+      return {
+        f: [-Z[0], -Z[1], -Z[2]],
+        up: [X[0] * sn + Y[0] * cs, X[1] * sn + Y[1] * cs, X[2] * sn + Y[2] * cs],
+        right: [X[0] * cs - Y[0] * sn, X[1] * cs - Y[1] * sn, X[2] * cs - Y[2] * sn],
+      };
+    }
+    /* азимут (от севера к востоку), высота и крен вида по направлению взгляда f и верху экрана up */
+    function viewFromBasis(f, up) {
       const yaw = Math.atan2(f[0], f[1]),
         pitch = Math.asin(Math.max(-1, Math.min(1, f[2])));
       /* крен: угол от «горизонтального верха» до верха экрана вокруг направления взгляда */
@@ -4838,8 +4848,67 @@ const minPix = 3;
       }
       return { yaw, pitch, roll };
     }
+    function orientToView(aD, bD, gD, sD) {
+      const B = orientBasis(aD, bD, gD, sD);
+      return viewFromBasis(B.f, B.up);
+    }
     /*GYRO-END*/
-    const gyro = { on: false, have: false, abs: false, needCal: false, wasPole: false, offs: 0, a: 0, b: 0, g: 0 };
+    /* --- фильтр ориентации: адаптивное сглаживание (в покое — сильное, убирает дрожь рук; при быстром повороте — слабое, чтобы не отставать) --- */
+    /*GYRO-FILTER-BEGIN*/
+    const _gy = (typeof location !== 'undefined' ? location.hash : '').match(/[#&]gy=([\d.]+),([\d.]+),([\d.]+)/);
+    const GY_FCMIN = _gy ? +_gy[1] : 0.8 /* Гц: частота среза в покое */,
+      GY_BETA = _gy ? +_gy[2] : 8.0 /* Гц на рад/с: насколько срез растёт со скоростью поворота */,
+      GY_FLOOR = _gy ? +_gy[3] : 0.6 /* рад/с: «шум» скорости, который не считаем движением */,
+      GY_FCD = 1.0; /* Гц: сглаживание оценки скорости */
+    const gyro = { on: false, have: false, abs: false, absEvt: false, settled: false, firstT: 0, glideUntil: 0, absWarn: 0, needCal: false, offs: 0, hasQ: false, lastT: 0, dv: 0 };
+    gyro.fq = new TH.Quaternion(); /* сглаженная ориентация камеры (оси: x вправо, y вверх, z назад) в системе ВСЗ */
+    gyro.lastQ = new TH.Quaternion();
+    const _gM = new TH.Matrix4(),
+      _gR = new TH.Vector3(),
+      _gU = new TH.Vector3(),
+      _gB = new TH.Vector3(),
+      _gTq = new TH.Quaternion();
+    function gyroFeed(a, b, g, s, tSec) {
+      const B = orientBasis(a, b, g, s);
+      _gR.fromArray(B.right);
+      _gU.fromArray(B.up);
+      _gB.set(-B.f[0], -B.f[1], -B.f[2]);
+      _gTq.setFromRotationMatrix(_gM.makeBasis(_gR, _gU, _gB));
+      if (!gyro.hasQ) {
+        gyro.fq.copy(_gTq);
+        gyro.lastQ.copy(_gTq);
+        gyro.lastT = tSec;
+        gyro.dv = 0;
+        gyro.hasQ = true;
+        return;
+      }
+      if (tSec - gyro.lastT > 0.5) {
+        /* долгая пауза в событиях — начинаем заново с текущего положения */
+        gyro.fq.copy(_gTq);
+        gyro.lastQ.copy(_gTq);
+        gyro.lastT = tSec;
+        gyro.dv = 0;
+        return;
+      }
+      const dt = Math.max(1e-3, tSec - gyro.lastT);
+      gyro.lastT = tSec;
+      const ang = 2 * Math.acos(Math.min(1, Math.abs(gyro.lastQ.dot(_gTq)))); /* угол между соседними отсчётами */
+      const sp = Math.max(0, ang / dt - GY_FLOOR); /* скорость поворота за вычетом шума датчика */
+      gyro.dv += (1 / (1 + 1 / (2 * Math.PI * GY_FCD) / dt)) * (sp - gyro.dv); /* сглаженная скорость, рад/с */
+      const fc = GY_FCMIN + GY_BETA * gyro.dv,
+        k = 1 / (1 + 1 / (2 * Math.PI * fc) / dt);
+      gyro.fq.slerp(_gTq, k);
+      gyro.lastQ.copy(_gTq);
+    }
+    /* углы вида из сглаженной ориентации */
+    const _gF = new TH.Vector3(),
+      _gUp = new TH.Vector3();
+    function gyroView() {
+      _gF.set(0, 0, -1).applyQuaternion(gyro.fq);
+      _gUp.set(0, 1, 0).applyQuaternion(gyro.fq);
+      return viewFromBasis([_gF.x, _gF.y, _gF.z], [_gUp.x, _gUp.y, _gUp.z]);
+    }
+    /*GYRO-FILTER-END*/
     const screenAngle = () =>
       screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle : window.orientation || 0;
     const toastEl = document.createElement('div');
@@ -4860,32 +4929,38 @@ const minPix = 3;
       '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4.5 9a9 9 0 0 0 0 6M19.5 9a9 9 0 0 1 0 6"/></svg>';
     setBtn.insertAdjacentElement('afterend', gyroBtn);
     document.body.classList.toggle('has-gyro', (DEVICE.mobile && DEVICE.sensors) || /[#&]gyro\b/.test(location.hash));
+    /* появился абсолютный север: фильтр стартует заново, вид плавно «довернётся» к настоящему направлению */
+    function setAbs() {
+      if (gyro.abs) return;
+      gyro.abs = true;
+      gyro.offs = 0;
+      gyro.needCal = false;
+      gyro.hasQ = false;
+      gyro.glideUntil = performance.now() + 900;
+      clearTimeout(gyro.absWarn);
+    }
     function onAbs(e) {
       if (e.alpha == null || e.beta == null || e.gamma == null) return;
-      if (!gyro.abs) gyro.abs = true; /* не трогаем offs — калибровка сохраняется */
-      gyro.a = e.alpha;
-      gyro.b = e.beta;
-      gyro.g = e.gamma;
+      gyro.absEvt = true; /* дальше относительные события deviceorientation игнорируем */
+      setAbs();
+      gyroFeed(e.alpha, e.beta, e.gamma, screenAngle(), (e.timeStamp || performance.now()) / 1000);
+      if (!gyro.have) gyro.firstT = performance.now();
       gyro.have = true;
     }
     function onRel(e) {
-      if (gyro.abs || e.alpha == null || e.beta == null || e.gamma == null) return;
+      if (gyro.absEvt || e.alpha == null || e.beta == null || e.gamma == null) return;
+      let a = e.alpha;
       if (e.absolute === true) {
-        /* Android Chrome/Firefox: absolute через обычный deviceorientation */
-        gyro.a = e.alpha;
-        gyro.abs = true;
+        setAbs(); /* Firefox и часть браузеров отдают абсолютный курс прямо в deviceorientation */
       } else if (typeof e.webkitCompassHeading === 'number') {
-        /* iOS: компасный курс; отсекаем некалиброванные и плохие показания */
-        if (typeof e.webkitCompassAccuracy === 'number') {
-          if (e.webkitCompassAccuracy < 0 || e.webkitCompassAccuracy > 25) return;
+        const acc = e.webkitCompassAccuracy; /* iOS: до калибровки компаса курс скачет ±30–60° */
+        if (!(typeof acc === 'number' && (acc < 0 || acc > 25))) {
+          a = 360 - e.webkitCompassHeading;
+          setAbs();
         }
-        gyro.a = 360 - e.webkitCompassHeading;
-        gyro.abs = true;
-      } else {
-        gyro.a = e.alpha;
       }
-      gyro.b = e.beta;
-      gyro.g = e.gamma;
+      gyroFeed(a, e.beta, e.gamma, screenAngle(), (e.timeStamp || performance.now()) / 1000);
+      if (!gyro.have) gyro.firstT = performance.now();
       gyro.have = true;
     }
     async function gyroStart() {
@@ -4903,108 +4978,71 @@ const minPix = 3;
       gyro.on = true;
       gyro.have = false;
       gyro.abs = false;
-      gyro.needCal = true; /* всегда калибруемся под текущий вид */
-      gyro.wasPole = false;
+      gyro.absEvt = false;
+      gyro.settled = false;
+      gyro.needCal = false;
+      gyro.hasQ = false;
       window.addEventListener('deviceorientationabsolute', onAbs, true);
       window.addEventListener('deviceorientation', onRel, true);
       gyroBtn.classList.add('on');
+      clearTimeout(gyro.absWarn);
+      gyro.absWarn = setTimeout(() => {
+        if (gyro.on && gyro.have && !gyro.abs) toast(TR('Нет компаса: вид продолжается от текущего направления'));
+      }, 4000);
       setTimeout(() => {
         if (gyro.on && !gyro.have) {
           gyroStop();
           toast(TR('Датчики ориентации недоступны'));
-        } else if (gyro.on && gyro.have && !gyro.abs) {
-          toast(TR('Компас недоступен — направление может дрейфовать. Долгое нажатие на кнопку = калибровка.'));
         }
-      }, 4000);
+      }, 3500);
     }
     function gyroStop() {
       window.removeEventListener('deviceorientationabsolute', onAbs, true);
       window.removeEventListener('deviceorientation', onRel, true);
       gyro.on = false;
       gyro.have = false;
-      gyro.wasPole = false;
-      gyroBtn.classList.remove('on', 'abs', 'rel');
+      gyro.hasQ = false;
+      clearTimeout(gyro.absWarn);
+      gyroBtn.classList.remove('on');
     }
-    /* Долгое нажатие = перекалибровка, короткий тап = вкл/выкл */
-    let gyroLongTimer = 0,
-      gyroLongFired = false;
-    gyroBtn.addEventListener('pointerdown', e => {
+    gyroBtn.onclick = e => {
       e.stopPropagation();
       e.preventDefault();
-      gyroLongFired = false;
-      clearTimeout(gyroLongTimer);
-      gyroLongTimer = setTimeout(() => {
-        if (gyro.on) {
-          gyro.needCal = true;
-          gyroLongFired = true;
-          toast(TR('Вид выровнен'));
-        }
-      }, 400);
-    });
-    gyroBtn.addEventListener('pointerup', e => {
-      e.stopPropagation();
-      e.preventDefault();
-      clearTimeout(gyroLongTimer);
-      if (gyroLongFired) {
-        gyroLongFired = false;
-        return;
-      }
       if (gyro.on) gyroStop();
       else gyroStart();
-    });
-    gyroBtn.addEventListener('pointercancel', () => {
-      clearTimeout(gyroLongTimer);
-      gyroLongFired = false;
-    });
-    gyroBtn.addEventListener('pointerleave', () => {
-      clearTimeout(gyroLongTimer);
-      gyroLongFired = false;
-    });
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && gyro.on) gyro.needCal = true;
-    });
+    };
     function gyroApply(dt) {
-      if (gyro.on && gyro.have && (fpsState === 'stand' || fpsState === 'fly')) {
-        const v = orientToView(gyro.a, gyro.b, gyro.g, screenAngle());
+      if (gyro.on && gyro.have && gyro.hasQ && (fpsState === 'stand' || fpsState === 'fly')) {
+        /* ждём ~0,25 с после первого события: абсолютный курс (если он есть) успевает прийти до калибровки */
+        if (!gyro.settled) {
+          if (performance.now() - gyro.firstT < 250) return;
+          gyro.settled = true;
+          gyro.needCal = !gyro.abs;
+        }
+        const v = gyroView();
         if (gyro.needCal) {
-          gyro.offs = wrapPi(fpsYaw - v.yaw);
+          gyro.offs = wrapPi(fpsYaw - v.yaw); /* нет абсолютного севера — продолжаем от текущего направления взгляда */
           gyro.needCal = false;
-          gyro.wasPole = false;
         }
-        const dyaw = Math.abs(wrapPi(v.yaw + gyro.offs - fpsYaw));
-        const dpitch = Math.abs(v.pitch - fpsPitch);
-        const fast = dyaw + dpitch > 0.08;
-        const rate = fast ? 40 : 16;
-        const k = 1 - Math.exp(-Math.min(dt, 0.1) * rate);
-        /* мягкая коррекция offset по компасу в покое (гасит шум магнитометра) */
-        if (!fast) {
-          const drift = wrapPi(v.yaw + gyro.offs - fpsYaw);
-          if (Math.abs(drift) < 0.3) gyro.offs -= drift * Math.min(1, dt * 1.5);
-        }
-        /* защита от сингулярности около зенита + ре-синк при выходе */
-        if (Math.abs(v.pitch) < 1.45) {
-          if (gyro.wasPole) {
-            gyro.wasPole = false;
-            gyro.offs = wrapPi(fpsYaw - v.yaw);
-          }
-          fpsYaw += wrapPi(v.yaw + gyro.offs - fpsYaw) * k;
-        } else {
-          gyro.wasPole = true;
-        }
+        const nearPole = Math.abs(v.pitch) > 1.2; /* у зенита/надира азимут и крен сильно «качаются» — здесь угол к углу не сглаживаем */
+        const glide = performance.now() < gyro.glideUntil;
+        const k = nearPole ? 1 : 1 - Math.exp(-Math.min(dt, 0.1) * (glide ? 6 : 40));
+        fpsYaw += wrapPi(v.yaw + gyro.offs - fpsYaw) * k;
         fpsPitch += (Math.max(-1.5, Math.min(1.5, v.pitch)) - fpsPitch) * k;
         fpsRoll += wrapPi(v.roll - fpsRoll) * k;
-        /* индикация abs / rel */
-        gyroBtn.classList.toggle('abs', gyro.abs && gyro.have);
-        gyroBtn.classList.toggle('rel', !gyro.abs && gyro.have);
       } else if (fpsRoll !== 0) {
         fpsRoll *= Math.exp(-Math.min(dt, 0.1) * 6);
         if (Math.abs(fpsRoll) < 1e-4) fpsRoll = 0;
       }
     }
+    /* после возврата из фона датчик без компаса мог «уйти» — продолжаем от текущего вида; с компасом вид должен совпадать с реальностью */
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && gyro.on && !gyro.abs) gyro.needCal = true;
+    });
     if (/[#&]test\b/.test(location.hash))
       window.SW_TEST = {
         orient: orientToView,
-        view: () => ({ state: fpsState, yaw: fpsYaw, pitch: fpsPitch, roll: fpsRoll, gyro: gyro.on, have: gyro.have, abs: gyro.abs, needCal: gyro.needCal, wasPole: gyro.wasPole, device: DEVICE }),
+        view: () => ({ state: fpsState, yaw: fpsYaw, pitch: fpsPitch, roll: fpsRoll, gyro: gyro.on, have: gyro.have, abs: gyro.abs, absEvt: gyro.absEvt, settled: gyro.settled, offs: gyro.offs, device: DEVICE }),
         /* базис местного горизонта и направления камеры в мировых координатах (для проверки) */
         basis: () => {
           if (!fpsAnchorLocal) return null;
