@@ -76,6 +76,7 @@ SW_I18N.en={
 "Своя дата:":"Custom date:",
 "от текущего времени":"from current time",
 "Линии созвездий":"Constellation lines",
+"Картинки созвездий":"Constellation art",
 "Слои и отображение":"Layers and display",
 "Отображение":"Display",
 "Небосвод":"Sky dome",

@@ -3048,6 +3048,223 @@ const minPix = 3;
       hl.visible = false;
       hl.renderOrder = -1;
       g.add(hl);
+      /* --- картинки созвездий (гравюры Гевелия, культура неба Hevelius для Stellarium) — слой включается галкой в меню слоёв; #cart=Gem,Ori ограничивает набор (для отладки) ---
+         Привязка: три опорные звезды на картинку (data/art.js). Пиксели → касательная плоскость вокруг центра опорных звёзд (аффинно, зеркальность гравюры получается сама)
+         → обратная гномоническая проекция → небесная сфера. Картинки чёрные на фоне, рисуются аддитивно.
+         Показывается только картинка того созвездия, на которое смотрит центр экрана (тот же поиск, что у подсветки линий и названий); текстуры грузятся лениво
+         и выгружаются, если на них давно не смотрели. Загрузка начинается только после того, как закончилась загрузка egarden.png (успехом или отказом),
+         чтобы картинки не конкурировали с текстурой земли за канал. Без папки constellations/ слой скрыт. */
+      const _ah = location.hash.match(/[#&]cart=([\w,]+)/),
+        ART = window.SW_DATA && SW_DATA.ART ? SW_DATA.ART : null;
+      /* какие созвездия (по русским названиям из CON_NAMES) «открывают» картинку Гевелия; у Гевелия фигуры нарезаны не как в IAU */
+      const ART_NAMES = {
+        And: ['Андромеда'], Aps: ['Райская Птица'], Aql: ['Орёл'], Aqr: ['Водолей'], Ara: ['Жертвенник'], Ari: ['Овен'], Aur: ['Возничий'], Boo: ['Волопас'],
+        Cam: ['Жираф'], Cap: ['Козерог'], Cas: ['Кассиопея'], Cen: ['Центавр'], Cep: ['Цефей'], Cet: ['Кит'], Cha: ['Хамелеон'], CMa: ['Большой Пёс'],
+        CMi: ['Малый Пёс'], Cnc: ['Рак'], Col: ['Голубь'], Com: ['Волосы Вероники'], CrA: ['Южная Корона'], CrB: ['Северная Корона'], Crt: ['Чаша'],
+        Cru: ['Южный Крест'], Crv: ['Ворон'], Cvn: ['Гончие Псы'], Cyg: ['Лебедь'], Del: ['Дельфин'], Dor: ['Золотая Рыба'], Dra: ['Дракон'],
+        Equ: ['Малый Конь'], Eri: ['Эридан'], Gem: ['Близнецы'], Gru: ['Журавль'], Her: ['Геркулес'], Hya: ['Гидра'], Hyi: ['Южная Гидра'],
+        Ind: ['Индеец'], Lac: ['Ящерица'], Leo: ['Лев'], Lep: ['Заяц'], Lib: ['Весы'], LMi: ['Малый Лев'], Lup: ['Волк'], Lyn: ['Рысь'], Lyr: ['Лира'],
+        Mon: ['Единорог'], Mus: ['Муха'], MBo: ['Овен'], Nav: ['Киль', 'Корма', 'Паруса'], Ori: ['Орион'], Pav: ['Павлин'], Peg: ['Пегас'],
+        Per: ['Персей'], Phe: ['Феникс'], PsA: ['Южная Рыба'], Psc: ['Рыбы'], Rob: ['Корма', 'Голубь'], Sco: ['Скорпион'], Sct: ['Щит'],
+        Sex: ['Секстант'], Sge: ['Стрела'], Sgr: ['Стрелец'], Srt: ['Змееносец', 'Змея'], Tau: ['Телец'], TAs: ['Южный Треугольник'],
+        TMa: ['Треугольник'], TMi: ['Треугольник'], Tuc: ['Тукан'], UMa: ['Большая Медведица'], UMi: ['Малая Медведица'], Vir: ['Дева'],
+        Vol: ['Летучая Рыба'], Vul: ['Лисичка'],
+      };
+      const artG = new TH.Group(),
+        artRecs = [];
+      artG.visible = false;
+      g.add(artG);
+      let artOn = false,
+        gDone = false /* egarden.png загружен или окончательно не загрузился */,
+        artProbed = false,
+        artAvail = false,
+        artDim = 1 /* дневное гашение, выставляет atmo() */,
+        artWant = -1,
+        artScanT = 0,
+        artT = performance.now();
+      const ART_R = 2895,
+        ART_OP = 0.6,
+        ART_N = 12,
+        ART_KEEP = 8; /* сколько загруженных картинок держим в памяти */
+      if (ART) {
+        const only = _ah ? _ah[1].toLowerCase().split(',') : null;
+        ART.forEach(a => {
+          if (only && !only.includes(a.id.toLowerCase())) return;
+          const names = ART_NAMES[a.id] || [],
+            set = new Set();
+          CON_NAMES.forEach((n, k) => {
+            if (names.includes(n)) set.add(k);
+          });
+          artRecs.push({ a, set, state: 0 /* 0 нет, 1 грузится, 2 готова, 3 ошибка */, aA: 0, last: 0 });
+        });
+      }
+      const det3 = m => m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) + m[2] * (m[3] * m[7] - m[4] * m[6]);
+      function artMapper(a) {
+        const DG = PI / 180,
+          vv = a.a.map(q => [Math.cos(q[3] * DG) * Math.cos(q[2] * DG), Math.cos(q[3] * DG) * Math.sin(q[2] * DG), Math.sin(q[3] * DG)]);
+        let cx = 0,
+          cy = 0,
+          cz = 0;
+        vv.forEach(v => {
+          cx += v[0];
+          cy += v[1];
+          cz += v[2];
+        });
+        const cn = Math.hypot(cx, cy, cz),
+          ra0 = Math.atan2(cy, cx),
+          de0 = Math.asin(cz / cn),
+          sd = Math.sin(de0),
+          cd = Math.cos(de0);
+        const T = a.a.map(q => {
+          const ra = q[2] * DG,
+            de = q[3] * DG,
+            c = sd * Math.sin(de) + cd * Math.cos(de) * Math.cos(ra - ra0);
+          return [(Math.cos(de) * Math.sin(ra - ra0)) / c, (cd * Math.sin(de) - sd * Math.cos(de) * Math.cos(ra - ra0)) / c];
+        });
+        const A = [];
+        a.a.forEach(q => A.push(q[0], q[1], 1));
+        const d = det3(A),
+          solve = rhs =>
+            [0, 1, 2].map(k => {
+              const B = A.slice();
+              for (let i = 0; i < 3; i++) B[i * 3 + k] = rhs[i];
+              return det3(B) / d;
+            }),
+          mx = solve(T.map(t => t[0])),
+          my = solve(T.map(t => t[1]));
+        /* пиксель (x,y) → экваториальные ra, de (радианы) */
+        return (x, y) => {
+          const xi = mx[0] * x + mx[1] * y + mx[2],
+            eta = my[0] * x + my[1] * y + my[2],
+            rho = Math.hypot(xi, eta);
+          if (rho < 1e-12) return [ra0, de0];
+          const c = Math.atan(rho),
+            sc = Math.sin(c),
+            cc = Math.cos(c);
+          return [ra0 + Math.atan2(xi * sc, rho * cd * cc - eta * sd * sc), Math.asin(cc * sd + (eta * sc * cd) / rho)];
+        };
+      }
+      const artCbs = [];
+      /* проверяем, что папка с картинками рядом есть (самая маленькая из них), и только тогда показываем галку слоя */
+      function artProbe() {
+        artProbed = true;
+        const im = new Image();
+        im.onload = () => {
+          artAvail = true;
+          artCbs.splice(0).forEach(f => f());
+        };
+        im.onerror = () => console.warn('[art] папка constellations/ недоступна — слой картинок скрыт');
+        im.src = new URL('constellations/triangulum-minus.png', location.href).href;
+      }
+      function artLoad(r) {
+        if (!artDbg.firstLoad) artDbg.firstLoad = performance.now();
+        r.state = 1;
+        const a = r.a,
+          url = new URL('constellations/' + a.f + '.png', location.href).href;
+        new TH.TextureLoader().load(
+          url,
+          tex => {
+            const W = tex.image.width,
+              H = tex.image.height,
+              map = artMapper(a),
+              N = ART_N,
+              pos = new Float32Array((N + 1) * (N + 1) * 3),
+              uv = new Float32Array((N + 1) * (N + 1) * 2),
+              idx = [];
+            for (let j = 0; j <= N; j++)
+              for (let i = 0; i <= N; i++) {
+                const k = j * (N + 1) + i,
+                  q = map((i / N) * W, (j / N) * H);
+                eq2w(q[0], q[1], pos, k * 3, ART_R);
+                uv[k * 2] = i / N;
+                uv[k * 2 + 1] = 1 - j / N;
+              }
+            for (let j = 0; j < N; j++)
+              for (let i = 0; i < N; i++) {
+                const k = j * (N + 1) + i;
+                idx.push(k, k + 1, k + N + 1, k + 1, k + N + 2, k + N + 1);
+              }
+            const geo = new TH.BufferGeometry();
+            geo.setAttribute('position', new TH.BufferAttribute(pos, 3));
+            geo.setAttribute('uv', new TH.BufferAttribute(uv, 2));
+            geo.setIndex(idx);
+            tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+            r.mat = new TH.MeshBasicMaterial({ map: tex, transparent: true, blending: TH.AdditiveBlending, depthWrite: false, side: TH.DoubleSide, opacity: 0 });
+            r.mesh = new TH.Mesh(geo, r.mat);
+            r.mesh.frustumCulled = false;
+            r.mesh.renderOrder = -1.8;
+            r.mesh.visible = false;
+            r.tex = tex;
+            r.geo = geo;
+            r.W = W;
+            r.H = H;
+            r.map = map;
+            artG.add(r.mesh);
+            r.state = 2;
+          },
+          undefined,
+          () => {
+            r.state = 3;
+            console.warn('[art] не загрузилась картинка', url);
+          }
+        );
+      }
+      function artUnload(r) {
+        artG.remove(r.mesh);
+        r.tex.dispose();
+        r.geo.dispose();
+        r.mat.dispose();
+        r.mesh = r.mat = r.tex = r.geo = r.map = null;
+        r.state = 0;
+        r.aA = 0;
+      }
+      const _av = new TH.Vector3(),
+        artDbg = { gDone: 0, firstLoad: 0 };
+      /* созвездие под центром взгляда: тот же критерий и гистерезис, что у подсветки и названий */
+      function artScan() {
+        C.getWorldDirection(_av);
+        let best = -1,
+          bs = 9,
+          cs = 9;
+        for (let k = 0; k < CS.length; k++) {
+          const q = Math.acos(Math.max(-1, Math.min(1, CS[k].c.dot(_av)))) / CS[k].r;
+          if (k === artWant) cs = q;
+          if (q < 0.8 && q < bs) {
+            bs = q;
+            best = k;
+          }
+        }
+        if (artWant >= 0 && cs < 0.95 && bs > cs * 0.6) best = artWant;
+        artWant = best;
+      }
+      function artStep(now) {
+        const dt = Math.min(0.1, (now - artT) / 1000);
+        artT = now;
+        if (ART && gDone && !artProbed) artProbe();
+        const act = artOn && g.visible && fpsState === 'stand';
+        if (!act) artWant = -1;
+        else if (now - artScanT > 120) {
+          artScanT = now;
+          artScan();
+        }
+        let ready = 0;
+        for (const r of artRecs) {
+          const tgt = act && artWant >= 0 && r.set.has(artWant) ? 1 : 0;
+          if (tgt && r.state === 0 && gDone && artAvail) artLoad(r);
+          if (r.state !== 2) continue;
+          r.aA = tgt > r.aA ? Math.min(1, r.aA + dt / 0.6) : Math.max(0, r.aA - dt / 0.4);
+          if (tgt) r.last = now;
+          r.mesh.visible = r.aA > 0.002;
+          r.mat.opacity = ART_OP * artDim * r.aA;
+          ready++;
+        }
+        if (ready > ART_KEEP) {
+          let old = null;
+          for (const r of artRecs) if (r.state === 2 && r.aA === 0 && (!old || r.last < old.last)) old = r;
+          if (old) artUnload(old);
+        }
+        artG.visible = artOn && artRecs.some(r => r.state === 2 && r.aA > 0.002);
+      }
       const _v = new TH.Vector3(),
         _lv = new TH.Vector3();
       for (let i = 0; i < SA.length; i++) {
@@ -3212,6 +3429,7 @@ const minPix = 3;
         dome.material.uniforms.uMK.value = mk;
         mat.uniforms.uLim.value = k > 0 ? 7 + (limMag(alt) - 7) * k - 2.2 * mk * k : 7;
         if (skySphere) skySphere.userData.uni.uDim.value = (1 - k * sm(-16, -6, alt)) * (1 - 0.45 * mk * k);
+        artDim = (1 - k * sm(-16, -6, alt)) * (1 - 0.45 * mk * k);
       }
       let _hid = false,
         _ekHid = false;
@@ -3349,11 +3567,17 @@ const minPix = 3;
               t.needsUpdate = true;
               gMat.uniforms.uTex.value = t;
               gMat.uniforms.uHas.value = 1;
+              gDone = true;
+              artDbg.gDone = performance.now();
             },
             undefined,
             () => {
               if (alt) _go(alt);
-              else console.warn('egarden.png не загрузился — используется плоская заливка');
+              else {
+                console.warn('egarden.png не загрузился — используется плоская заливка');
+                gDone = true;
+                artDbg.gDone = performance.now();
+              }
             }
           );
         _go(NL + 'egarden.png', NL !== NL_RAW ? NL_RAW + 'egarden.png' : null);
@@ -3741,6 +3965,45 @@ const minPix = 3;
           on = v;
           if (!on) want = -1;
         },
+        setArt(v) {
+          artOn = v;
+        },
+        whenArt(f) {
+          if (artAvail) f();
+          else artCbs.push(f);
+        },
+        artTest() {
+          const out = { enabled: !!ART, on: artOn, gDone: artDbg.gDone, firstLoad: artDbg.firstLoad, avail: artAvail, want: artWant >= 0 ? CON_NAMES[artWant] : null, recs: {}, anchorErrDeg: [] };
+          for (const r of artRecs) {
+            if (r.state === 0 && !r.last) continue;
+            out.recs[r.a.id] = { state: r.state, aA: +r.aA.toFixed(3), op: r.mat ? +r.mat.opacity.toFixed(3) : null };
+            if (r.state === 2)
+              for (const p of r.a.a) {
+                const q = r.map(p[0], p[1]),
+                  DG = PI / 180,
+                  v1 = [Math.cos(q[1]) * Math.cos(q[0]), Math.cos(q[1]) * Math.sin(q[0]), Math.sin(q[1])],
+                  v2 = [Math.cos(p[3] * DG) * Math.cos(p[2] * DG), Math.cos(p[3] * DG) * Math.sin(p[2] * DG), Math.sin(p[3] * DG)];
+                out.anchorErrDeg.push(+((Math.acos(Math.min(1, v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2])) * 180) / PI).toFixed(6));
+              }
+          }
+          return out;
+        },
+        artDir(id) {
+          const r = artRecs.find(x => x.a.id === id);
+          if (!r) return null;
+          let q;
+          if (r.state === 2) q = r.map(r.W / 2, r.H / 2);
+          else {
+            let x = 0, y = 0, z = 0;
+            r.a.a.forEach(p => {
+              x += Math.cos((p[3] * PI) / 180) * Math.cos((p[2] * PI) / 180);
+              y += Math.cos((p[3] * PI) / 180) * Math.sin((p[2] * PI) / 180);
+              z += Math.sin((p[3] * PI) / 180);
+            });
+            q = [Math.atan2(y, x), Math.atan2(z, Math.hypot(x, y))];
+          }
+          return eqv(Math.cos(q[1]) * Math.cos(q[0]), Math.cos(q[1]) * Math.sin(q[0]), Math.sin(q[1])).toArray();
+        },
         setNames(v) {
           namesOn = v;
           lblDirty = true;
@@ -3758,6 +4021,7 @@ const minPix = 3;
           skyOrbits = v;
         },
         labels() {
+          artStep(performance.now());
           conLabels();
           drawNames();
         },
@@ -3811,6 +4075,7 @@ const minPix = 3;
     layersMenu.innerHTML =
       '<div class="section" id="layGen"><div class="section-label">Отображение</div></div><div class="section" id="laySky" style="display:none"><div class="section-label">Небосвод</div>' +
       lrow('consChk', 'Линии созвездий', false) +
+      (window.SW_DATA && SW_DATA.ART ? lrow('artChk', 'Картинки созвездий', false) : '') +
       lrow('namesChk', 'Названия созвездий', false) +
       lrow('starNmChk', 'Названия звёзд', false) +
       lrow('planNmChk', 'Названия планет', true) +
@@ -3832,6 +4097,15 @@ const minPix = 3;
         .insertBefore(atm, layersMenu.querySelector('#consChk').closest('.row'));
     }
     layersMenu.querySelector('#consChk').onchange = e => SkyW.setCons(e.target.checked);
+    {
+      const ac = layersMenu.querySelector('#artChk');
+      if (ac) {
+        const row = ac.closest('.row');
+        row.style.display = 'none'; /* появится, когда найдена папка constellations/ и закончилась загрузка egarden.png */
+        SkyW.whenArt(() => (row.style.display = ''));
+        ac.onchange = e => SkyW.setArt(e.target.checked);
+      }
+    }
     layersMenu.querySelector('#namesChk').onchange = e => SkyW.setNames(e.target.checked);
     layersMenu.querySelector('#compassChk').onchange = e =>
       document.body.classList.toggle('no-compass', !e.target.checked);
@@ -4086,7 +4360,7 @@ const minPix = 3;
     }
     /* слои неба при входе в режим — всегда по умолчанию (названия созвездий выключены) */
     function applySkyDefaults() {
-      const D = { consChk: false, namesChk: false, starNmChk: false, planNmChk: true, compassChk: true, moonChk: true };
+      const D = { consChk: false, artChk: false, namesChk: false, starNmChk: false, planNmChk: true, compassChk: true, moonChk: true };
       for (const id in D) {
         const c = layersMenu.querySelector('#' + id);
         if (c && c.checked !== D[id]) {
@@ -5071,6 +5345,8 @@ const minPix = 3;
     if (/[#&]test\b/.test(location.hash))
       window.SW_TEST = {
         orient: orientToView,
+        art: () => SkyW.artTest(),
+        artDir: id => SkyW.artDir(id),
         view: () => ({ state: fpsState, yaw: fpsYaw, pitch: fpsPitch, roll: fpsRoll, gyro: gyro.on, have: gyro.have, abs: gyro.abs, absEvt: gyro.absEvt, settled: gyro.settled, offs: gyro.offs, declDeg: magDecl() / DEG, iosOff: gyro.iosOff, device: DEVICE }),
         /* базис местного горизонта и направления камеры в мировых координатах (для проверки) */
         basis: () => {
