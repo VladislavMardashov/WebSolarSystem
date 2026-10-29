@@ -747,16 +747,21 @@ const minPix = 3;
     const sky = new TH.Group();
     sky.rotation.x = -0.4;
     S.add(sky);
+    /* eso: true — панорама ESO (eso0932a, ESO/S. Brunier); для неё действует своя точная ориентация (AG_ESO, см. ниже) */
     const SKY_SOURCES = [
+      { url: NL + 'milky_way_eso.jpg', src: 'GitHub-eso', eso: true },
+      ...(NL !== NL_RAW ? [{ url: NL_RAW + 'milky_way_eso.jpg', src: 'GitHub-raw-eso', eso: true }] : []),
       { url: NL + 'milky_way_alt.jpg', src: 'GitHub-alt' },
       ...(NL !== NL_RAW ? [{ url: NL_RAW + 'milky_way_alt.jpg', src: 'GitHub-raw' }] : []),
-      { url: 'https://upload.wikimedia.org/wikipedia/commons/6/60/ESO_-_Milky_Way.jpg', src: 'ESO' },
+      { url: 'https://upload.wikimedia.org/wikipedia/commons/6/60/ESO_-_Milky_Way.jpg', src: 'ESO', eso: true },
     ];
-    let skyTexture = null;
+    let skyTexture = null,
+      skyIsEso = false;
     for (let i = 0; i < SKY_SOURCES.length; i++) {
       const entry = SKY_SOURCES[i];
       try {
         skyTexture = await loadTextureNoCache(entry.url, `[sky] ${entry.src}`, 25000, MAX_SKY_DIM);
+        skyIsEso = !!entry.eso;
         break;
       } catch (e) {
         console.warn(`[sky] ${entry.src}: FAIL — ${e.message || e}`);
@@ -2951,7 +2956,15 @@ const minPix = 3;
         [0.492728466, -0.450346958, 0.744584633],
         [-0.867600811, -0.188374602, 0.460199784],
       ];
-      const W = AG.map(r => eqv(r[0], r[1], r[2]));
+      /* AG — оси галактической системы в экваториальной J2000 (эта матрица эпохи B1950, годится для старых текстур).
+         AG_ESO — те же оси, подогнанные под панораму ESO по ~100 звёздам каталога (остаток 2.5–5′, меньше пикселя панорамы):
+         учтены и неточность AG, и то, что центр Галактики на панораме лежит не точно в её центре (x≈50.9%, y≈49.1%). */
+      const AG_ESO = [
+        [-0.001194090, -0.891168663, -0.453670573],
+        [0.478660650, -0.398832318, 0.782187166],
+        [-0.877999177, -0.216220250, 0.427043613]
+      ];
+      const W = (skyIsEso ? AG_ESO : AG).map(r => eqv(r[0], r[1], r[2]));
       sky.quaternion.setFromRotationMatrix(new TH.Matrix4().makeBasis(W[0], W[2].clone().negate(), W[1]));
       const bv2rgb = bv => {
         const T = (4600 * (1 / (0.92 * bv + 1.7) + 1 / (0.92 * bv + 0.62))) / 100;
@@ -3089,6 +3102,9 @@ const minPix = 3;
         artWant = -1,
         artScanT = 0,
         artT = performance.now();
+      const _ab = location.hash.match(/[#&]abias=(-?[\d.]+)/),
+        ART_BIAS = _ab ? +_ab[1] : 0,
+        artMatList = [];
       const ART_R = 2895,
         ART_OP = 0.6,
         ART_N = 12,
@@ -3196,7 +3212,17 @@ const minPix = 3;
             geo.setAttribute('uv', new TH.BufferAttribute(uv, 2));
             geo.setIndex(idx);
             tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-            r.mat = new TH.MeshBasicMaterial({ map: tex, transparent: true, blending: TH.AdditiveBlending, depthWrite: false, side: TH.DoubleSide, opacity: 0 });
+            /* свой шейдер вместо MeshBasicMaterial: нужен сдвиг уровня mip (uBias) — тонкая штриховка гравюры (линии в 1 пиксель) иначе мерцает при малейшем дрожании камеры */
+            r.mat = new TH.ShaderMaterial({
+              uniforms: { map: { value: tex }, uOp: { value: 0 }, uBias: { value: ART_BIAS } },
+              vertexShader: 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+              fragmentShader: 'uniform sampler2D map;uniform float uOp,uBias;varying vec2 vUv;void main(){gl_FragColor=vec4(texture2D(map,vUv,uBias).rgb*uOp,1.0);}',
+              transparent: true,
+              blending: TH.AdditiveBlending,
+              depthWrite: false,
+              side: TH.DoubleSide,
+            });
+            artMatList.push(r.mat);
             r.mesh = new TH.Mesh(geo, r.mat);
             r.mesh.frustumCulled = false;
             r.mesh.renderOrder = -1.8;
@@ -3221,6 +3247,8 @@ const minPix = 3;
         r.tex.dispose();
         r.geo.dispose();
         r.mat.dispose();
+        const mi = artMatList.indexOf(r.mat);
+        if (mi >= 0) artMatList.splice(mi, 1);
         r.mesh = r.mat = r.tex = r.geo = r.map = null;
         r.state = 0;
         r.aA = 0;
@@ -3263,7 +3291,7 @@ const minPix = 3;
           r.aA = tgt > r.aA ? Math.min(1, r.aA + dt / 0.6) : Math.max(0, r.aA - dt / 0.4);
           if (tgt) r.last = now;
           r.mesh.visible = r.aA > 0.002;
-          r.mat.opacity = ART_OP * artDim * r.aA;
+          r.mat.uniforms.uOp.value = ART_OP * artDim * r.aA;
           ready++;
         }
         if (ready > ART_KEEP) {
@@ -3524,6 +3552,7 @@ const minPix = 3;
         namesOn = false,
         skyOrbits = false,
         starNm = false,
+        dsoOn = false,
         planNm = true,
         lblDirty = false;
       const btn = document.createElement('button');
@@ -3862,6 +3891,26 @@ const minPix = 3;
         const d = new TH.Vector3(t[0], t[1], t[2]);
         return { d, p: d.clone().multiplyScalar(2890), n: a[2], m: a[3] };
       });
+      /* далёкие объекты (data/dso.js): синяя обводка (круг или эллипс по размеру и позиционному углу) и синяя подпись */
+      const DSO = (window.SW_DATA && SW_DATA.DSO ? SW_DATA.DSO : []).map(o => {
+        const ra = o.ra * DEG,
+          de = o.de * DEG,
+          t = new Float32Array(3);
+        eq2w(ra, de, t, 0, 1);
+        const u = new TH.Vector3(t[0], t[1], t[2]),
+          north = eqv(-Math.sin(de) * Math.cos(ra), -Math.sin(de) * Math.sin(ra), Math.cos(de)),
+          east = eqv(-Math.sin(ra), Math.cos(ra), 0),
+          pa = o.pa === null ? null : o.pa * DEG;
+        return {
+          u,
+          p: u.clone().multiplyScalar(2890),
+          dir: pa === null ? null : north.multiplyScalar(Math.cos(pa)).addScaledVector(east, Math.sin(pa)),
+          ra: (o.a / 60) * DEG * 0.5 /* большая полуось, рад */,
+          rb: (o.b / 60) * DEG * 0.5,
+          rc: ((o.a + o.b) / 120) * DEG * 0.5 /* радиус круга, когда угол неизвестен */,
+          lbl: o.n + (o.d ? ' · ' + o.d : ''),
+        };
+      });
       const PN = ['Меркурий', 'Венера', 'Марс', 'Юпитер', 'Сатурн', 'Уран', 'Нептун'];
       const cvl = document.createElement('canvas');
       cvl.id = 'skyLbl';
@@ -3918,7 +3967,7 @@ const minPix = 3;
       }
       function drawNames() {
         const pinOn = !namesOn && shown >= 0 && hA > 0.002;
-        const want = g.visible && fpsState === 'stand' && fpsAnchorLocal && (starNm || planNm || namesOn || pinOn);
+        const want = g.visible && fpsState === 'stand' && fpsAnchorLocal && (starNm || planNm || namesOn || pinOn || dsoOn);
         fitCv();
         if (!want) {
           if (lblDirty) {
@@ -3965,7 +4014,7 @@ const minPix = 3;
         if (starNm)
           for (let i = 0; i < SNM.length; i++) {
             const s = SNM[i];
-            if (s.m > lim - 0.4 || s.d.dot(_U) < 0.01) continue;
+            if (s.m > lim - 0.4 || (groundOn && s.d.dot(_U) < 0.01)) continue; /* без «Поверхности Земли» — и ниже горизонта */
             put(s.p, s.n, '#cfe6ff', 13);
           }
         if (planNm) {
@@ -3979,6 +4028,34 @@ const minPix = 3;
           _sp.copy(_Sd).multiplyScalar(2890);
           if (_Sd.dot(_U) > 0.01) put(_sp, 'Солнце', '#ffd27a', 18);
         }
+        /* далёкие объекты: синий круг/эллипс по угловому размеру (не меньше 7 px) и синяя подпись под ним; при выключенной земле — и ниже горизонта; днём не показываем */
+        if (dsoOn && lim > 1.5) {
+          const ppr = hh / Math.tan((C.fov * PI) / 360); /* пикселей на радиан */
+          for (const o of DSO) {
+            if (groundOn && o.u.dot(_U) < 0.01) continue;
+            _nv.copy(o.p).applyMatrix4(mw).project(C);
+            if (_nv.z > 1) continue;
+            const x = (_nv.x * 0.5 + 0.5) * cw,
+              y = (-_nv.y * 0.5 + 0.5) * ch,
+              a = Math.max(0, Math.min(1, 1.25 - (0.85 * Math.hypot(x - hw, y - hh)) / rn));
+            if (a < 0.05) continue;
+            let rx, ry, rot = 0;
+            if (o.dir) {
+              /* ось эллипса: куда на экране смотрит направление «позиционный угол» */
+              _nv.copy(o.p).addScaledVector(o.dir, 60).applyMatrix4(mw).project(C);
+              rot = Math.atan2((-_nv.y * 0.5 + 0.5) * ch - y, (_nv.x * 0.5 + 0.5) * cw - x);
+              rx = Math.max(7, Math.min(3000, o.ra * ppr));
+              ry = Math.max(5, Math.min(rx, o.rb * ppr));
+            } else rx = ry = Math.max(7, Math.min(3000, o.rc * ppr));
+            cx.globalAlpha = a;
+            cx.strokeStyle = '#4aa3ff';
+            cx.lineWidth = 1.5;
+            cx.beginPath();
+            cx.ellipse(x, y, rx, ry, rot, 0, 2 * PI);
+            cx.stroke();
+            put(o.p, o.lbl, '#6fb4ff', Math.hypot(rx * Math.sin(rot), ry * Math.cos(rot)) + 12);
+          }
+        }
         cx.globalAlpha = 1;
       }
       return {
@@ -3991,6 +4068,9 @@ const minPix = 3;
         },
         setGround(v) {
           groundOn = v;
+        },
+        artBias(b) {
+          artMatList.forEach(m => (m.uniforms.uBias.value = b));
         },
         /* тап по небу (экранные координаты): ближайшее созвездие, если тап попал в его «радиус»; возвращает название или null */
         tapSky(x, y) {
@@ -4031,7 +4111,7 @@ const minPix = 3;
           const out = { enabled: !!ART, on: artOn, gDone: artDbg.gDone, firstLoad: artDbg.firstLoad, avail: artAvail, want: artWant >= 0 ? CON_NAMES[artWant] : null, recs: {}, anchorErrDeg: [] };
           for (const r of artRecs) {
             if (r.state === 0 && !r.last) continue;
-            out.recs[r.a.id] = { state: r.state, aA: +r.aA.toFixed(3), op: r.mat ? +r.mat.opacity.toFixed(3) : null };
+            out.recs[r.a.id] = { state: r.state, aA: +r.aA.toFixed(3), op: r.mat ? +r.mat.uniforms.uOp.value.toFixed(3) : null };
             if (r.state === 2)
               for (const p of r.a.a) {
                 const q = r.map(p[0], p[1]),
@@ -4067,6 +4147,17 @@ const minPix = 3;
         setStarNames(v) {
           starNm = v;
           lblDirty = true;
+        },
+        setDso(v) {
+          dsoOn = v;
+          lblDirty = true;
+        },
+        dsoDir(i) {
+          return DSO[i] ? DSO[i].u.toArray() : null;
+        },
+        starDir(name) {
+          const q = SNM.find(x => x.n === name);
+          return q ? q.d.toArray() : null;
         },
         setPlanetNames(v) {
           planNm = v;
@@ -4133,6 +4224,7 @@ const minPix = 3;
       (window.SW_DATA && SW_DATA.ART ? lrow('artChk', 'Иллюстрации созвездий', false) : '') +
       lrow('namesChk', 'Названия созвездий', false) +
       lrow('starNmChk', 'Названия звёзд', false) +
+      (window.SW_DATA && SW_DATA.DSO ? lrow('dsoChk', 'Далёкие объекты', false) : '') +
       lrow('planNmChk', 'Названия планет', true) +
       lrow('compassChk', 'Стороны света', true) +
       lrow('groundChk', 'Поверхность Земли', true) +
@@ -4170,6 +4262,7 @@ const minPix = 3;
       moonOn = e.target.checked;
     };
     layersMenu.querySelector('#starNmChk').onchange = e => SkyW.setStarNames(e.target.checked);
+    if (layersMenu.querySelector('#dsoChk')) layersMenu.querySelector('#dsoChk').onchange = e => SkyW.setDso(e.target.checked);
     layersMenu.querySelector('#planNmChk').onchange = e => SkyW.setPlanetNames(e.target.checked);
     layersMenu.querySelector('#profChk').onchange = e => PROF.set(e.target.checked);
     document.body.append(layersBtn, layersMenu);
@@ -4411,7 +4504,7 @@ const minPix = 3;
     }
     /* слои неба при входе в режим — всегда по умолчанию (названия созвездий выключены) */
     function applySkyDefaults() {
-      const D = { consChk: false, artChk: false, namesChk: false, starNmChk: false, planNmChk: true, compassChk: true, groundChk: true, moonChk: true };
+      const D = { consChk: false, artChk: false, namesChk: false, starNmChk: false, dsoChk: false, planNmChk: true, compassChk: true, groundChk: true, moonChk: true };
       for (const id in D) {
         const c = layersMenu.querySelector('#' + id);
         if (c && c.checked !== D[id]) {
@@ -5194,7 +5287,11 @@ const minPix = 3;
       GY_FLOOR = _gy ? +_gy[3] : 0.6 /* рад/с: «шум» скорости, который не считаем движением */,
       GY_FCD = 1.0, /* Гц: сглаживание оценки скорости */
       GY_PMAX = 1.553; /* рад (~89°): предел наклона вида; раньше 1.5 давало до ~4° ошибки направления у самого зенита */
-    const gyro = { on: false, starting: false, have: false, abs: false, absEvt: false, settled: false, firstT: 0, glideUntil: 0, absWarn: 0, haveTimer: 0, needCal: false, offs: 0, iosOff: 0, hasQ: false, lastT: 0, dv: 0 };
+    /* «мёртвая зона» (градусы, #gyd=): пока телефон почти неподвижен, цель вида не двигается, иначе микродрожание датчика (~0.05°, около пикселя)
+       заставляет мелкую штриховку иллюстраций мерцать. При движении цель тянется за вводом на расстоянии зоны («на верёвке»), поэтому задержки не добавляется. 0 — выключено. */
+    const _gd = location.hash.match(/[#&]gyd=([\d.]+)/);
+    let GY_DB = ((_gd ? +_gd[1] : 0.2) * PI) / 180;
+    const gyro = { lockOk: false, lY: 0, lP: 0, lR: 0, on: false, starting: false, have: false, abs: false, absEvt: false, settled: false, firstT: 0, glideUntil: 0, absWarn: 0, haveTimer: 0, needCal: false, offs: 0, iosOff: 0, hasQ: false, lastT: 0, dv: 0 };
     gyro.fq = new TH.Quaternion(); /* сглаженная ориентация камеры (оси: x вправо, y вверх, z назад) в системе ВСЗ */
     gyro.lastQ = new TH.Quaternion();
     const _gM = new TH.Matrix4(),
@@ -5286,6 +5383,7 @@ const minPix = 3;
     function setAbs() {
       if (gyro.abs) return;
       gyro.abs = true;
+      gyro.lockOk = false;
       gyro.offs = magDecl();
       gyro.needCal = false;
       gyro.hasQ = false;
@@ -5334,6 +5432,7 @@ const minPix = 3;
       }
       if (fpsState !== 'stand' && fpsState !== 'fly') return; /* пока шёл запрос, из режима вышли */
       gyro.on = true;
+      gyro.lockOk = false;
       gyro.iosOff = 0;
       gyro.have = false;
       gyro.abs = false;
@@ -5389,9 +5488,30 @@ const minPix = 3;
         const nearPole = Math.abs(v.pitch) > 1.2; /* у зенита/надира азимут и крен сильно «качаются» — здесь угол к углу не сглаживаем */
         const glide = performance.now() < gyro.glideUntil;
         const k = nearPole ? 1 : 1 - Math.exp(-Math.min(dt, 0.1) * (glide ? 6 : 40));
-        fpsYaw += wrapPi(v.yaw + gyro.offs - fpsYaw) * k;
-        fpsPitch += (Math.max(-GY_PMAX, Math.min(GY_PMAX, v.pitch)) - fpsPitch) * k;
-        fpsRoll += wrapPi(v.roll - fpsRoll) * k;
+        /* цель вида с «мёртвой зоной» */
+        const iy = v.yaw + gyro.offs,
+          ip = Math.max(-GY_PMAX, Math.min(GY_PMAX, v.pitch)),
+          ir = v.roll;
+        if (!gyro.lockOk || glide || nearPole || GY_DB <= 0) {
+          gyro.lY = iy;
+          gyro.lP = ip;
+          gyro.lR = ir;
+          gyro.lockOk = true;
+        } else {
+          const dY = wrapPi(iy - gyro.lY),
+            dP = ip - gyro.lP,
+            dR = wrapPi(ir - gyro.lR),
+            dist = Math.hypot(dY * Math.cos(ip), dP, dR);
+          if (dist > GY_DB) {
+            const f = (dist - GY_DB) / dist;
+            gyro.lY += dY * f;
+            gyro.lP += dP * f;
+            gyro.lR += dR * f;
+          }
+        }
+        fpsYaw += wrapPi(gyro.lY - fpsYaw) * k;
+        fpsPitch += (gyro.lP - fpsPitch) * k;
+        fpsRoll += wrapPi(gyro.lR - fpsRoll) * k;
       } else if (fpsRoll !== 0) {
         fpsRoll *= Math.exp(-Math.min(dt, 0.1) * 6);
         if (Math.abs(fpsRoll) < 1e-4) fpsRoll = 0;
@@ -5408,6 +5528,10 @@ const minPix = 3;
         cam: () => ({ hRel: fpsHRel, near: C.near, dist: C.position.length() }),
         artDir: id => SkyW.artDir(id),
         pin: () => SkyW.pinTest(),
+        dsoDir: i => SkyW.dsoDir(i),
+        starDir: n => SkyW.starDir(n),
+        artBias: b => SkyW.artBias(b),
+        gyDb: d => (GY_DB = (d * PI) / 180),
         screenOf: d => SkyW.screenOf(d),
         view: () => ({ state: fpsState, yaw: fpsYaw, pitch: fpsPitch, roll: fpsRoll, gyro: gyro.on, have: gyro.have, abs: gyro.abs, absEvt: gyro.absEvt, settled: gyro.settled, offs: gyro.offs, declDeg: magDecl() / DEG, iosOff: gyro.iosOff, device: DEVICE }),
         /* базис местного горизонта и направления камеры в мировых координатах (для проверки) */
