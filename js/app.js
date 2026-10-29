@@ -497,6 +497,10 @@ let camMode = 1,
 const SKY_SUN_A = 0.55;
 const SKY_FAR_A = 0.85;
 const SKY_K = 0.35;
+const _mw = location.hash.match(/[#&]mw=([\d.]+),([\d.]+)/),
+  MW_FPS = _mw ? [+_mw[1], +_mw[2]] : [1.0, 1.0]; /* яркость и гамма Млечного Пути в режиме неба */
+let mwK = 0,
+  mwT = 0;
 let SIM_SKY_BRIGHT = 0.85;
 const _sstep = (e0, e1, x) => {
   const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
@@ -1685,11 +1689,15 @@ const minPix = 3;
       const [a, b] = [...pt.values()];
       return Math.hypot(a[0] - b[0], a[1] - b[1]);
     };
-    let gyroDragAcc = 0;
+    let gyroDragAcc = 0,
+      tapOk = false,
+      tapT = 0;
     el.addEventListener('pointerdown', e => {
       gyroDragAcc = 0;
       el.setPointerCapture(e.pointerId);
       pt.set(e.pointerId, [e.clientX, e.clientY]);
+      tapOk = pt.size === 1; /* тап — это один палец; второй палец отменяет */
+      tapT = performance.now();
       pd = pinch();
       if (fpsState === 'select' && pt.size === 1) {
         fpsSelDownX = e.clientX;
@@ -1703,10 +1711,9 @@ const minPix = 3;
         _dy = e.clientY - o[1];
       if (fpsState === 'stand' || fpsState === 'fly') {
         if (pt.size === 2) {
+          /* два пальца в режиме неба ничего не делают (раньше меняли высоту над землёй) */
           pt.set(e.pointerId, [e.clientX, e.clientY]);
-          const d = pinch();
-          if (pd && d) fpsZoom(pd / d);
-          pd = d;
+          pd = pinch();
           return;
         }
         if (fpsState === 'stand' && pt.size === 1) {
@@ -1741,6 +1748,9 @@ const minPix = 3;
           if (_dx * _dx + _dy * _dy < 49) trySelectSurface(e.clientX, e.clientY);
           fpsSelDownX = null;
         }
+        /* короткий тап одним пальцем в режиме неба: зажечь созвездие под пальцем на 5 секунд */
+        if (t === 'pointerup' && fpsState === 'stand' && tapOk && pt.size === 1 && gyroDragAcc < 10 && performance.now() - tapT < 450) SkyW.tapSky(e.clientX, e.clientY);
+        if (pt.size > 1) tapOk = false;
         pt.delete(e.pointerId);
         pd = pinch();
       })
@@ -1748,10 +1758,7 @@ const minPix = 3;
     el.addEventListener(
       'wheel',
       e => {
-        if (fpsState === 'fly' || fpsState === 'stand') {
-          fpsZoom(1 + Math.sign(e.deltaY) * 0.08);
-          return;
-        }
+        if (fpsState === 'fly' || fpsState === 'stand') return; /* в режиме неба колесо ничего не делает */
         if (fpsState === 'exit') return;
         dd = cl(dd * (1 + Math.sign(e.deltaY) * 0.1));
       },
@@ -3248,8 +3255,9 @@ const minPix = 3;
           artScan();
         }
         let ready = 0;
+        const aw = artOn && now < pinUntil && pinK >= 0 ? pinK : artWant;
         for (const r of artRecs) {
-          const tgt = act && artWant >= 0 && r.set.has(artWant) ? 1 : 0;
+          const tgt = act && aw >= 0 && r.set.has(aw) ? 1 : 0;
           if (tgt && r.state === 0 && gDone && artAvail) artLoad(r);
           if (r.state !== 2) continue;
           r.aA = tgt > r.aA ? Math.min(1, r.aA + dt / 0.6) : Math.max(0, r.aA - dt / 0.4);
@@ -3266,7 +3274,10 @@ const minPix = 3;
         artG.visible = artOn && artRecs.some(r => r.state === 2 && r.aA > 0.002);
       }
       const _v = new TH.Vector3(),
-        _lv = new TH.Vector3();
+        _lv = new TH.Vector3(),
+        _tp = new TH.Vector3(),
+        _tv = new TH.Vector3(),
+        _td = new TH.Vector3();
       for (let i = 0; i < SA.length; i++) {
         const q = CS[SC[i]],
           c = q.c;
@@ -3276,6 +3287,10 @@ const minPix = 3;
           Math.acos(Math.min(1, c.dot(SB[i])))
         );
       }
+      /* тап по созвездию «зажигает» его на PIN_MS: подсветка линий и названия (и картинка, если слой картинок включён) — независимо от галок «Линии»/«Названия» */
+      const PIN_MS = 5000;
+      let pinK = -1,
+        pinUntil = 0;
       let want = -1,
         shown = -1,
         hA = 0,
@@ -3300,11 +3315,12 @@ const minPix = 3;
       function fadeStep(now) {
         const dt = Math.min(0.1, (now - lastT) / 1000);
         lastT = now;
-        if (shown !== want) {
+        const w = now < pinUntil ? pinK : want; /* закреплённое тапом важнее того, на что смотрит центр экрана */
+        if (shown !== w) {
           hA -= dt / 0.22;
           if (hA <= 0) {
             hA = 0;
-            shown = want;
+            shown = w;
             if (shown >= 0) {
               hg.setDrawRange(CS[shown].o * 2, CS[shown].n * 2);
             }
@@ -3549,6 +3565,7 @@ const minPix = 3;
       gMesh.visible = false;
       S.add(gMesh);
       let gReq = false,
+        groundOn = true /* галка «Поверхность Земли»: выключает и egarden, и плоскую заливку-заглушку (это один и тот же шейдер) */,
         gEarthOff = false;
       const gSaved = [],
         _gN = new TH.Vector3(),
@@ -3633,11 +3650,12 @@ const minPix = 3;
       function groundSync() {
         earthLOD();
         const act = (fpsState === 'stand' || fpsState === 'fly') && fpsAnchorLocal && !PROF.off.ground;
-        const a = act
+        const aAct = act
           ? fpsState === 'stand'
             ? 1
             : sm(0.78, 1, (performance.now() - fpsFlyStart) / 3000)
           : 0;
+        const a = groundOn ? aAct : 0;
         if (!gReq && fpsState !== 'off') gLoad();
         gMesh.visible = a > 0.001;
         if (a > 0.001) {
@@ -3660,10 +3678,11 @@ const minPix = 3;
           u.uA.value = a;
           gMesh.position.copy(C.position);
         }
-        gEarth(a > 0.985);
+        gEarth(aAct > 0.985); /* сам шар планеты прячем и при выключенной «земле»: иначе камера оказалась бы внутри него */
       }
       function conLabels() {
         const now = performance.now();
+        if (!(g.visible && fpsState === 'stand')) pinUntil = 0;
         if (!(g.visible && on && namesOn && fpsState === 'stand')) want = -1;
         else if (now - lastScan > 120) {
           lastScan = now;
@@ -3898,7 +3917,8 @@ const minPix = 3;
         }
       }
       function drawNames() {
-        const want = g.visible && fpsState === 'stand' && fpsAnchorLocal && (starNm || planNm || namesOn);
+        const pinOn = !namesOn && shown >= 0 && hA > 0.002;
+        const want = g.visible && fpsState === 'stand' && fpsAnchorLocal && (starNm || planNm || namesOn || pinOn);
         fitCv();
         if (!want) {
           if (lblDirty) {
@@ -3917,16 +3937,16 @@ const minPix = 3;
           hh = ch / 2,
           rn = Math.min(hw, hh),
           lim = mat.uniforms.uLim.value;
-        const put = (v, txt, col, dy, hiCol, hiA) => {
+        const put = (v, txt, col, dy, hiCol, hiA, mul) => {
           _nv.copy(v).applyMatrix4(mw).project(C);
           if (_nv.z > 1) return;
           const x = (_nv.x * 0.5 + 0.5) * cw,
             y = (-_nv.y * 0.5 + 0.5) * ch,
             r = Math.hypot(x - hw, y - hh) / rn,
-            a = Math.max(0, Math.min(1, 1.25 - 0.85 * r));
+            a = mul === undefined ? Math.max(0, Math.min(1, 1.25 - 0.85 * r)) : 1; /* закреплённая тапом подпись не тускнеет к краю экрана */
           if (a < 0.05) return;
           const sp = lblSprite(txt, col);
-          cx.globalAlpha = a;
+          cx.globalAlpha = mul === undefined ? a : a * mul;
           cx.drawImage(sp.cv, x - sp.w / 2, y + dy - sp.h / 2, sp.w, sp.h);
           /* подсветка: тот же размер, поверх основной подписи (основная не гаснет — мигания нет) */
           if (hiA > 0.01) {
@@ -3938,9 +3958,10 @@ const minPix = 3;
         /* названия созвездий: все, что в поле зрения и над горизонтом (как названия звёзд); у созвездия в центре плавно разгорается подсветка того же кегля */
         if (namesOn)
           for (let k = 0; k < CS.length; k++) {
-            if (CS[k].c.dot(_U) < -0.05) continue;
+            if (groundOn && CS[k].c.dot(_U) < -0.05) continue; /* при выключенной «Поверхности Земли» показываем и те, что ниже горизонта */
             put(CS[k].p, CON_NAMES[k], '#e8b53f', 0, '#fff0b8', k === shown ? hA : 0);
           }
+        else if (pinOn) put(CS[shown].p, CON_NAMES[shown], '#e8b53f', 0, '#fff0b8', hA, hA);
         if (starNm)
           for (let i = 0; i < SNM.length; i++) {
             const s = SNM[i];
@@ -3967,6 +3988,40 @@ const minPix = 3;
         },
         setArt(v) {
           artOn = v;
+        },
+        setGround(v) {
+          groundOn = v;
+        },
+        /* тап по небу (экранные координаты): ближайшее созвездие, если тап попал в его «радиус»; возвращает название или null */
+        tapSky(x, y) {
+          if (!(g.visible && fpsState === 'stand')) return null;
+          C.updateMatrixWorld();
+          _tp.setFromMatrixPosition(C.matrixWorld);
+          _tv.set((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1, 0.5).unproject(C);
+          _td.copy(_tv).sub(_tp).normalize();
+          let best = -1,
+            bs = 1;
+          for (let k = 0; k < CS.length; k++) {
+            const q = Math.acos(Math.max(-1, Math.min(1, CS[k].c.dot(_td)))) / CS[k].r;
+            if (q < bs) {
+              bs = q;
+              best = k;
+            }
+          }
+          if (best < 0) return null;
+          pinK = best;
+          pinUntil = performance.now() + PIN_MS;
+          return CON_NAMES[best];
+        },
+        pinTest() {
+          const now = performance.now();
+          return { pin: pinK >= 0 && now < pinUntil ? CON_NAMES[pinK] : null, leftMs: Math.max(0, Math.round(pinUntil - now)), shown: shown >= 0 ? CON_NAMES[shown] : null, hA: +hA.toFixed(3) };
+        },
+        screenOf(d) {
+          C.updateMatrixWorld();
+          _tp.setFromMatrixPosition(C.matrixWorld);
+          _tv.set(d[0], d[1], d[2]).multiplyScalar(1000).add(_tp).project(C);
+          return [((_tv.x * 0.5 + 0.5) * innerWidth), ((-_tv.y * 0.5 + 0.5) * innerHeight), _tv.z];
         },
         whenArt(f) {
           if (artAvail) f();
@@ -4075,11 +4130,12 @@ const minPix = 3;
     layersMenu.innerHTML =
       '<div class="section" id="layGen"><div class="section-label">Отображение</div></div><div class="section" id="laySky" style="display:none"><div class="section-label">Небосвод</div>' +
       lrow('consChk', 'Линии созвездий', false) +
-      (window.SW_DATA && SW_DATA.ART ? lrow('artChk', 'Картинки созвездий', false) : '') +
+      (window.SW_DATA && SW_DATA.ART ? lrow('artChk', 'Иллюстрации созвездий', false) : '') +
       lrow('namesChk', 'Названия созвездий', false) +
       lrow('starNmChk', 'Названия звёзд', false) +
       lrow('planNmChk', 'Названия планет', true) +
       lrow('compassChk', 'Стороны света', true) +
+      lrow('groundChk', 'Поверхность Земли', true) +
       lrow('moonChk', 'Лунный свет', true) +
       '</div><div class="section" id="layDbg"><div class="section-label">Отладка</div>' +
       lrow('profChk', 'Профайлер (временный)', false) +
@@ -4109,6 +4165,7 @@ const minPix = 3;
     layersMenu.querySelector('#namesChk').onchange = e => SkyW.setNames(e.target.checked);
     layersMenu.querySelector('#compassChk').onchange = e =>
       document.body.classList.toggle('no-compass', !e.target.checked);
+    layersMenu.querySelector('#groundChk').onchange = e => SkyW.setGround(e.target.checked);
     layersMenu.querySelector('#moonChk').onchange = e => {
       moonOn = e.target.checked;
     };
@@ -4195,8 +4252,6 @@ const minPix = 3;
 
     const FPS_SEG_W = 384,
       FPS_SEG_H = 192; /* самый детальный уровень LOD Земли (раньше 768×384 = 588 тыс. треугольников) */
-    const FPS_H_MIN = 2e-5,
-      FPS_H_MAX = 6e-4;
     const FPS_H_DEFAULT = 3e-5;
     let fpsHRel = FPS_H_DEFAULT;
     let fpsGeoFine = null,
@@ -4354,13 +4409,9 @@ const minPix = 3;
       fpsBtn.classList.toggle('on', fpsState !== 'off');
       setMenu.classList.toggle('fpsOffset', !!can);
     }
-    function fpsZoom(factor) {
-      if (fpsState !== 'select' && fpsState !== 'fly' && fpsState !== 'stand') return;
-      fpsHRel = Math.max(FPS_H_MIN, Math.min(FPS_H_MAX, fpsHRel * factor));
-    }
     /* слои неба при входе в режим — всегда по умолчанию (названия созвездий выключены) */
     function applySkyDefaults() {
-      const D = { consChk: false, artChk: false, namesChk: false, starNmChk: false, planNmChk: true, compassChk: true, moonChk: true };
+      const D = { consChk: false, artChk: false, namesChk: false, starNmChk: false, planNmChk: true, compassChk: true, groundChk: true, moonChk: true };
       for (const id in D) {
         const c = layersMenu.querySelector('#' + id);
         if (c && c.checked !== D[id]) {
@@ -4980,8 +5031,16 @@ const minPix = 3;
         if (real) {
           const camR = C.position.length() / AU_TO_UNITS;
           const t = Math.min(camR / SKY_REF, 1);
-          const gamma = 1 + SKY_K * (1 - t);
-          const amp = SKY_SUN_A + (SKY_FAR_A - SKY_SUN_A) * t;
+          let gamma = 1 + SKY_K * (1 - t);
+          let amp = SKY_SUN_A + (SKY_FAR_A - SKY_SUN_A) * t;
+          /* в режиме неба Млечный Путь ярче: камера у Солнца, где настройка самая тусклая, а на земном небе он почти не виден.
+             Плавно (≈0.3 с), чтобы при входе и выходе яркость не «прыгала». #mw=усиление,гамма — подбор (по умолчанию 1.0,1.0; мягче — 0.9,1.1) */
+          const _nowMw = performance.now(),
+            _dtMw = Math.min(0.1, (_nowMw - mwT) / 1000);
+          mwT = _nowMw;
+          mwK += (((fpsState === 'stand' || fpsState === 'fly') ? 1 : 0) - mwK) * Math.min(1, _dtMw * 3);
+          amp += (MW_FPS[0] - amp) * mwK;
+          gamma += (MW_FPS[1] - gamma) * mwK;
           U.uBright.value = Math.max(0, amp);
           U.uLinear.value = 1;
           U.uSkyGamma.value = gamma;
@@ -5346,7 +5405,10 @@ const minPix = 3;
       window.SW_TEST = {
         orient: orientToView,
         art: () => SkyW.artTest(),
+        cam: () => ({ hRel: fpsHRel, near: C.near, dist: C.position.length() }),
         artDir: id => SkyW.artDir(id),
+        pin: () => SkyW.pinTest(),
+        screenOf: d => SkyW.screenOf(d),
         view: () => ({ state: fpsState, yaw: fpsYaw, pitch: fpsPitch, roll: fpsRoll, gyro: gyro.on, have: gyro.have, abs: gyro.abs, absEvt: gyro.absEvt, settled: gyro.settled, offs: gyro.offs, declDeg: magDecl() / DEG, iosOff: gyro.iosOff, device: DEVICE }),
         /* базис местного горизонта и направления камеры в мировых координатах (для проверки) */
         basis: () => {

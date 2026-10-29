@@ -126,6 +126,10 @@ body.fps-stand .label{display:none!important}
 
 #layersMenu .divider{height:1px;background:#1f232e;margin:2px 0}
 #layersMenu{bottom:auto;top:calc(58px + env(safe-area-inset-top,0px));left:8px;min-width:232px;transform-origin:top left;transform:translateY(-6px) scale(.97)}
+/* высота меню ограничена: сверху кнопка слоёв (58px), снизу кнопка режима неба (её верхний край на 100px от низа) + зазор 8px; всё, что не влезло, прокручивается */
+#layersMenu{box-sizing:border-box;max-height:calc(100vh - 166px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 166px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#3a4052 transparent}
+#layersMenu::-webkit-scrollbar{width:6px}
+#layersMenu::-webkit-scrollbar-thumb{background:#3a4052;border-radius:3px}
 #layersBtn{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:8px;z-index:58;width:42px;height:42px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px}
 #layersBtn.open{background:var(--acc);color:#111;border-color:var(--acc)}
 
@@ -163,3 +167,4 @@ body.has-gyro.fps-sky #gyroBtn{display:flex}
 #gyroBtn.on{background:var(--acc);color:#111;border-color:var(--acc)}
 #toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100vw - 32px);background:#0c101c;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:9px 14px;font-size:13px;color:var(--fg);z-index:90;opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.show{opacity:1}
+#layersMenu>*{flex:none}
