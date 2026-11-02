@@ -498,7 +498,17 @@ const SKY_SUN_A = 0.55;
 const SKY_FAR_A = 0.85;
 const SKY_K = 0.35;
 const _mw = location.hash.match(/[#&]mw=([\d.]+),([\d.]+)/),
-  MW_FPS = _mw ? [+_mw[1], +_mw[2]] : [1.0, 1.0]; /* яркость и гамма Млечного Пути в режиме неба */
+  MW_HASH = _mw ? [+_mw[1], +_mw[2]] : null; /* #mw=яркость,гамма — вручную для режима неба */
+/* Освещение панорамы ESO. У неё тот же фон, что у прежней текстуры, но яркие места втрое ярче (99-й перцентиль 0.35 против 0.12), поэтому:
+   «реализм» у Солнца — менее тёмная настройка (раньше ядро Галактики было почти невидимо), режим неба — чуть контрастнее (гамма 1.15, фон глубже) и без пересвета ядра.
+   sunA/farA/k — как SKY_SUN_A/SKY_FAR_A/SKY_K; fps — [яркость, гамма] в режиме неба. #skyp=sunA,farA,k — подбор. Упрощённый режим не менялся. */
+const _sp = location.hash.match(/[#&]skyp=([\d.]+),([\d.]+),([\d.]+)/),
+  SKY_ESO = { sunA: 0.7, farA: 0.85, k: 0.25, fps: [1.0, 1.15] };
+if (_sp) {
+  SKY_ESO.sunA = +_sp[1];
+  SKY_ESO.farA = +_sp[2];
+  SKY_ESO.k = +_sp[3];
+}
 let mwK = 0,
   mwT = 0;
 let SIM_SKY_BRIGHT = 0.85;
@@ -1655,6 +1665,44 @@ const minPix = 3;
       dist = ov,
       dd = ov,
       cur = bodies[0];
+    /* Перелёт камеры к новому объекту. Плавность считаем в масштабе обзора, а не в линейном расстоянии (в «реализме» путь между планетами в 10⁵ раз больше расстояния,
+       на котором камера стоит у объекта: «малая доля пути» для неё мгновенный прыжок, а «защёлкивание» остатка в конце — скачок размера).
+       Траектория по van Wijk & Nuij, «Smooth and efficient zooming and panning» (2003): сначала камера отъезжает, пока вид не охватит цель, потом перемещается,
+       потом приближается; скорость в экранных единицах постоянна. По времени — smootherstep (скорость и ускорение в начале и конце нулевые), длительность конечная.
+       camFly — поворот орбитальных углов на сторону подлёта (прогресс = время перелёта flyU). */
+    let camFly = null,
+      flyU = 1 /* время перелёта 0→1, 1 — перелёта нет */,
+      flyT = 0,
+      flyDur = 1,
+      flyLam = 1 /* доля пройденного пути цели 0→1 */,
+      flyPath = null;
+    const flyOff0 = new TH.Vector3(); /* смещение цели в момент выбора объекта; off(t) = flyOff0·(1 − flyLam) */
+    const _relPrev = new TH.Vector3();
+    let _relPrevOk = false;
+    const _fw = location.hash.match(/[#&]flyw=([\d.]+)/),
+      FLY_SPEED = _fw ? +_fw[1] / 3.6 : 1; /* #flyw=3.6 — как по умолчанию; меньше — медленнее */
+    const _clampN = (x, a, b) => Math.min(b, Math.max(a, x));
+    function flyPlan(w0, w1, U) {
+      const rho = Math.SQRT2,
+        r2 = rho * rho;
+      w0 = Math.max(w0, 1e-12);
+      w1 = Math.max(w1, 1e-12);
+      if (!(U > 0.3 * Math.max(w0, w1))) return { zoomOnly: true, w0, w1, U, dur: _clampN(1.0 + 0.5 * Math.abs(Math.log(w1 / w0)), 1.2, 4.5) };
+      const b0 = (w1 * w1 - w0 * w0 + r2 * r2 * U * U) / (2 * w0 * r2 * U),
+        b1 = (w1 * w1 - w0 * w0 - r2 * r2 * U * U) / (2 * w1 * r2 * U),
+        r0 = -Math.asinh(b0),
+        r1 = -Math.asinh(b1),
+        S = (r1 - r0) / rho;
+      return { zoomOnly: false, w0, w1, U, rho, r0, S, dur: _clampN(1.0 + 0.3 * S, 1.2, 6.5) };
+    }
+    function flyEval(path, p) {
+      if (path.zoomOnly) return { lam: p, w: path.w0 * Math.pow(path.w1 / path.w0, p) };
+      const x = path.rho * path.S * p + path.r0;
+      return {
+        lam: _clampN(((path.w0 / (path.rho * path.rho)) * (Math.cosh(path.r0) * Math.tanh(x) - Math.sinh(path.r0))) / path.U, 0, 1),
+        w: (path.w0 * Math.cosh(path.r0)) / Math.cosh(x),
+      };
+    }
     const wv = new TH.Vector3();
     const wpos = b => {
       if (b.isMoon) {
@@ -1680,6 +1728,11 @@ const minPix = 3;
       if (d == null || d === 0) return null;
       return new TH.Quaternion().setFromAxisAngle(ZA, (d * PI) / 180);
     }
+    let _rec = null; /* запись кадров для проверок (SW_TEST.rec) */
+    const _pkD = new TH.Vector3(),
+      _fl = new TH.Vector3(),
+      _lookV = new TH.Vector3(),
+      _qInv = new TH.Quaternion();
     const tgv = new TH.Vector3(),
       off = new TH.Vector3(),
       camOff = new TH.Vector3(),
@@ -1735,6 +1788,7 @@ const minPix = 3;
         return;
       }
       if (pt.size == 1) {
+        camFly = null; /* пользователь взялся за камеру — автоповорот к стороне подлёта отменяем */
         th -= _dx * 0.006;
         ph = Math.min(3, Math.max(0.15, ph - _dy * 0.006));
       }
@@ -2957,12 +3011,12 @@ const minPix = 3;
         [-0.867600811, -0.188374602, 0.460199784],
       ];
       /* AG — оси галактической системы в экваториальной J2000 (эта матрица эпохи B1950, годится для старых текстур).
-         AG_ESO — те же оси, подогнанные под панораму ESO по ~100 звёздам каталога (остаток 2.5–5′, меньше пикселя панорамы):
+         AG_ESO — те же оси, подогнанные под оригинал панорамы ESO (6000×3000) по ~200 звёздам каталога (остаток около 1 пикселя панорамы, 0.06°):
          учтены и неточность AG, и то, что центр Галактики на панораме лежит не точно в её центре (x≈50.9%, y≈49.1%). */
       const AG_ESO = [
-        [-0.001194090, -0.891168663, -0.453670573],
-        [0.478660650, -0.398832318, 0.782187166],
-        [-0.877999177, -0.216220250, 0.427043613]
+        [-0.000897415, -0.890802628, -0.454389560],
+        [0.479495754, -0.399130354, 0.781523372],
+        [-0.877543740, -0.217176514, 0.427494263]
       ];
       const W = (skyIsEso ? AG_ESO : AG).map(r => eqv(r[0], r[1], r[2]));
       sky.quaternion.setFromRotationMatrix(new TH.Matrix4().makeBasis(W[0], W[2].clone().negate(), W[1]));
@@ -4573,6 +4627,10 @@ const minPix = 3;
       dist = newDist;
       dd = newDist;
       off.set(0, 0, 0);
+      flyU = 1;
+      flyLam = 1;
+      flyPath = null;
+      camFly = null;
       fpsState = animated ? 'exit' : 'off';
       gyroStop();
       if (!animated) finishFpsExit();
@@ -4816,7 +4874,17 @@ const minPix = 3;
       }
       const b = targets[i];
       ci = i;
+      /* Сторона подлёта: камера окажется там, откуда мы летим (новое тело — прямо по курсу, пролёта «сквозь» него нет); для «Обзора» углы не трогаем */
+      camFly = null;
+      if (!b.isRoot && camOff.lengthSq() > 1e-12) {
+        _pkD.copy(C.position).sub(wpos(b));
+        if (_pkD.lengthSq() > 1e-18) camFly = { a: camOff.clone().normalize(), b: _pkD.clone().normalize(), s: 0 };
+      }
       off.copy(tgv).sub(wpos(b));
+      flyOff0.copy(off);
+      _relPrev.copy(C.position).sub(wpos(b)); /* для скорости пыли: положение камеры относительно нового объекта */
+      _relPrevOk = true;
+      dustFlight = true; /* перелёт к другому объекту: пыль включится, пока камера движется */
       cur = b;
       spinRef = objSpin(b);
       const _q = objTiltQ(b);
@@ -4833,6 +4901,11 @@ const minPix = 3;
               ? b.r * 8
               : b.r * 7 + 6
             : b.r * (real ? 5 : 7) + (real ? Math.min(6, b.r * 8) : 6));
+      flyPath = flyPlan(dist, dd, flyOff0.length());
+      flyT = 0;
+      flyDur = flyPath.dur / FLY_SPEED;
+      flyU = 0;
+      flyLam = 0;
       dropBtn.innerHTML = b.n + ' <span class="tri">▲</span>';
       dropList.querySelectorAll('.dd-item').forEach((el, j) => el.classList.toggle('on', j === i));
       clearLabels();
@@ -4919,6 +4992,84 @@ const minPix = 3;
     pick(0);
     enforceSpeedLimit();
     console.log('[phase] ready');
+    /* --- космическая «пыль» при перелётах между объектами (тестовый вариант; #nodust выключает) ---
+       Идея: пыль неподвижна в системе объекта назначения, а камера летит сквозь неё; поэтому поток боковой и зависит от глубины (параллакс), как в жизни.
+       Скорости перелётов отличаются на много порядков, поэтому пыль живёт сразу в нескольких масштабах (каждый в DUST_R раз крупнее предыдущего); виден тот,
+       у которого поток сейчас комфортен (≈DUST_FLOW размера ячейки в секунду), окно из DUST_J масштабов скользит вслед за скоростью — диапазон не ограничен, констант скорости нет.
+       Комфортный поток DUST_FLOW — только для быстрых перелётов: ниже скорости порядка «расстояние назначения в секунду» он пропорционален скорости (flow = DUST_FLOW·nv/(nv+0.5)),
+       иначе в конце перелёта, когда камера уже почти встала, пыль неслась бы так же быстро, как в начале (масштаб подбирался бы под любую скорость).
+       Скорость камеры относительно объекта назначения = боковая (цель скользит: off затухает как e^(−4t)) + радиальная (подъезд dist→dd, e^(−6t)).
+       Учёт только боковой давал «остановку» пыли, пока планета ещё растёт. Пыль идёт, пока перелёт не закончился (флаг dustFlight ставит pick()), и только тогда:
+       зум колесом и вращение пыли не дают. Ячейки считаются в двойной точности на JS (дробная часть → шейдер). */
+    const DUST_ON = !/[#&]nodust\b/.test(location.hash),
+      DUST_J = 10,
+      DUST_R = 2.2,
+      DUST_N = 1200,
+      DUST_FLOW = 0.3,
+      DUST_L0 = 1e-3;
+    var dustFlight = false; /* var: pick(0) вызывается при запуске раньше этого места */
+    let dustK = 0,
+      dustV = 0,
+      dustKc = 0,
+      dustFlow = 0;
+    const dust = (() => {
+      const n = DUST_J * DUST_N,
+        aB = new Float32Array(n * 6),
+        aJ = new Float32Array(n * 2),
+        aE = new Float32Array(n * 2);
+      let k = 0;
+      for (let j = 0; j < DUST_J; j++)
+        for (let i = 0; i < DUST_N; i++) {
+          const x = Math.random(),
+            y = Math.random(),
+            z = Math.random();
+          for (let e = 0; e < 2; e++) {
+            aB[k * 3] = x;
+            aB[k * 3 + 1] = y;
+            aB[k * 3 + 2] = z;
+            aJ[k] = j;
+            aE[k] = e;
+            k++;
+          }
+        }
+      const geo = new TH.BufferGeometry();
+      geo.setAttribute('position', new TH.BufferAttribute(new Float32Array(n * 6), 3));
+      geo.setAttribute('aB', new TH.BufferAttribute(aB, 3));
+      geo.setAttribute('aJ', new TH.BufferAttribute(aJ, 1));
+      geo.setAttribute('aEnd', new TH.BufferAttribute(aE, 1));
+      const mat = new TH.ShaderMaterial({
+        uniforms: {
+          uL: { value: new Array(DUST_J).fill(1) },
+          uOff: { value: Array.from({ length: DUST_J }, () => new TH.Vector3()) },
+          uW: { value: new Array(DUST_J).fill(0) },
+          uV: { value: new TH.Vector3() },
+          uA: { value: 0 },
+        },
+        vertexShader:
+          'attribute vec3 aB;attribute float aJ;attribute float aEnd;' +
+          'uniform float uL[' + DUST_J + '];uniform vec3 uOff[' + DUST_J + '];uniform float uW[' + DUST_J + '];uniform vec3 uV;uniform float uA;varying float vA;' +
+          'void main(){int j=int(aJ+0.5);float L=uL[j];' +
+          'vec3 d=fract(aB-uOff[j]+0.5)-0.5;' + /* положение относительно камеры в долях ячейки */
+          'vec3 r=d*L+aEnd*uV*0.06;' + /* хвост штриха — где частица была 60 мс назад (камера сместилась на uV·dt) */
+          'float m=max(abs(d.x),max(abs(d.y),abs(d.z)));' +
+          'float f=(1.0-smoothstep(0.32,0.5,m))*smoothstep(0.1,0.28,length(d));' +
+          'vA=uA*uW[j]*f*(aEnd>0.5?0.15:1.0);' +
+          'gl_Position=projectionMatrix*modelViewMatrix*vec4(r,1.0);}',
+        fragmentShader: 'varying float vA;void main(){gl_FragColor=vec4(0.8,0.88,1.0,vA);}',
+        transparent: true,
+        blending: TH.AdditiveBlending,
+        depthTest: false,
+        depthWrite: false,
+      });
+      const m = new TH.LineSegments(geo, mat);
+      m.frustumCulled = false;
+      m.renderOrder = 20;
+      m.visible = false;
+      S.add(m);
+      return m;
+    })();
+    const _dRel = new TH.Vector3(),
+      _dV = new TH.Vector3();
     function loop(now) {
       requestAnimationFrame(loop);
       PROF.begin(now);
@@ -5049,15 +5200,45 @@ const minPix = 3;
           }
         }
       }
-      off.multiplyScalar(Math.exp(-dt * 4));
+      if (flyPath) {
+        /* перелёт: траектория van Wijk, время по smootherstep; в конце точные значения без «защёлкивания» остатка */
+        flyT += dt;
+        const x = Math.min(1, flyT / flyDur);
+        flyU = x * x * x * (x * (6 * x - 15) + 10);
+        const e = flyEval(flyPath, flyU);
+        flyLam = e.lam;
+        off.copy(flyOff0).multiplyScalar(1 - e.lam);
+        dist = e.w;
+        if (x >= 1) {
+          flyPath = null;
+          flyU = 1;
+          flyLam = 1;
+          off.set(0, 0, 0);
+        }
+      } else {
+        off.multiplyScalar(Math.exp(-dt * 4));
+        dist += (dd - dist) * Math.min(1, dt * 6);
+      }
       tgv.copy(wpos(cur)).add(off);
-      dist += (dd - dist) * Math.min(1, dt * 6);
       smoothTiltQ.slerp(curTiltQ, Math.min(1, dt * 4));
       camMix += (camMode - camMix) * Math.min(1, dt * 3);
       if (camMix >= 0.999) appliedQ.copy(smoothTiltQ);
       else if (camMix <= 0.001) appliedQ.copy(qId);
       else {
         appliedQ.copy(qId).slerp(smoothTiltQ, camMix);
+      }
+      if (camFly) {
+        /* сферическая интерполяция направления «от объекта к камере» (мировые координаты) в темпе скольжения цели e^(−4t), затем перевод в локальные углы орбиты */
+        camFly.s = flyU; /* по времени (smootherstep), а не по доле пути: доля набирается почти вся в середине, где камера далеко от центра, и вид «взмахнул» бы */
+        const A = camFly.a,
+          B = camFly.b,
+          om = Math.acos(Math.max(-1, Math.min(1, A.dot(B))));
+        if (om < 1e-5) _fl.copy(B);
+        else _fl.copy(A).multiplyScalar(Math.sin((1 - camFly.s) * om) / Math.sin(om)).addScaledVector(B, Math.sin(camFly.s * om) / Math.sin(om));
+        _fl.normalize().applyQuaternion(_qInv.copy(appliedQ).invert());
+        ph = Math.min(3, Math.max(0.15, Math.acos(Math.max(-1, Math.min(1, _fl.y)))));
+        th = Math.atan2(_fl.x, _fl.z) - normalizeAngle(objSpin(cur) - spinRef) * camMix;
+        if (!flyPath) camFly = null;
       }
       const thSpin = th + normalizeAngle(objSpin(cur) - spinRef) * camMix;
       const sp0 = Math.sin(ph),
@@ -5067,6 +5248,7 @@ const minPix = 3;
       C.position.set(tgv.x + camOff.x, tgv.y + camOff.y, tgv.z + camOff.z);
       C.up.set(0, 1, 0).applyQuaternion(appliedQ);
       C.lookAt(tgv);
+      if (_rec && _rec.a.length < _rec.n) _rec.a.push({ dt: Math.min(dt, 0.05), p: C.position.toArray(), u: flyU, f: C.getWorldDirection(new TH.Vector3()).toArray(), t: wpos(cur).toArray() });
       gyroApply(dt);
       if (fpsState === 'fly' || fpsState === 'stand') {
         computeFpsPose(_fpsTargetPos, _fpsTargetQuat);
@@ -5104,8 +5286,44 @@ const minPix = 3;
       }
       sky.scale.setScalar(Math.max(1, dist / 1000));
       sky.position.copy(C.position);
-      SkyW.update();
-      skySync();
+      if (DUST_ON) {
+        /* скорость камеры относительно объекта назначения: разность положений за кадр (rel = off + camOff) */
+        _dRel.copy(off).add(camOff);
+        if (fpsState === 'off' && _relPrevOk && dt > 1e-4) _dV.copy(_dRel).sub(_relPrev).multiplyScalar(1 / dt);
+        else _dV.set(0, 0, 0);
+        _relPrev.copy(_dRel);
+        _relPrevOk = fpsState === 'off';
+        const v = _dV.length(),
+          nv = v / Math.max(dd, 1e-9);
+        if (dustFlight && (fpsState !== 'off' || (!flyPath && nv < 0.01))) dustFlight = false; /* перелёт закончился (путь пройден) и камера практически встала; в начале пути скорость ноль — это ещё перелёт */
+        dustV = v;
+        const kT = dustFlight ? _sstep(-2.0, -1.0, Math.log10(Math.max(nv, 1e-6))) : 0;
+        dustK += (kT - dustK) * Math.min(1, dt * 8);
+        dust.visible = dustK > 0.01 && v > 1e-9;
+        if (dust.visible) {
+          const u = dust.material.uniforms,
+            flow = (DUST_FLOW * nv) / (nv + 0.5),
+            Ls = v / flow,
+            kc = Math.round(Math.log(Ls / DUST_L0) / Math.log(DUST_R));
+          dustKc = kc;
+          dustFlow = flow;
+          for (let i = 0; i < DUST_J; i++) {
+            const k = kc - (DUST_J >> 1) + i,
+              slot = ((k % DUST_J) + DUST_J) % DUST_J,
+              L = DUST_L0 * Math.pow(DUST_R, k),
+              lr = Math.log(Ls / L);
+            u.uL.value[slot] = L;
+            u.uW.value[slot] = Math.exp(-0.5 * lr * lr);
+            const fx = _dRel.x / L,
+              fy = _dRel.y / L,
+              fz = _dRel.z / L;
+            u.uOff.value[slot].set(fx - Math.floor(fx), fy - Math.floor(fy), fz - Math.floor(fz));
+          }
+          u.uV.value.copy(_dV);
+          u.uA.value = 0.275 * dustK; /* было 0.55: пыль на 50% тусклее */
+          dust.position.copy(C.position);
+        }
+      }
       glow.position.copy(sunM.position);
       gl2.position.copy(sunM.position);
       gl3.position.copy(sunM.position);
@@ -5124,16 +5342,20 @@ const minPix = 3;
         if (real) {
           const camR = C.position.length() / AU_TO_UNITS;
           const t = Math.min(camR / SKY_REF, 1);
-          let gamma = 1 + SKY_K * (1 - t);
-          let amp = SKY_SUN_A + (SKY_FAR_A - SKY_SUN_A) * t;
+          const sunA = skyIsEso ? SKY_ESO.sunA : SKY_SUN_A,
+            farA = skyIsEso ? SKY_ESO.farA : SKY_FAR_A,
+            kk = skyIsEso ? SKY_ESO.k : SKY_K,
+            fpsT = MW_HASH || (skyIsEso ? SKY_ESO.fps : [1.0, 1.0]);
+          let gamma = 1 + kk * (1 - t);
+          let amp = sunA + (farA - sunA) * t;
           /* в режиме неба Млечный Путь ярче: камера у Солнца, где настройка самая тусклая, а на земном небе он почти не виден.
-             Плавно (≈0.3 с), чтобы при входе и выходе яркость не «прыгала». #mw=усиление,гамма — подбор (по умолчанию 1.0,1.0; мягче — 0.9,1.1) */
+             Плавно (≈0.3 с), чтобы при входе и выходе яркость не «прыгала». #mw=яркость,гамма — подбор (по умолчанию 1.0,1.0; для панорамы ESO — SKY_ESO.fps) */
           const _nowMw = performance.now(),
             _dtMw = Math.min(0.1, (_nowMw - mwT) / 1000);
           mwT = _nowMw;
           mwK += (((fpsState === 'stand' || fpsState === 'fly') ? 1 : 0) - mwK) * Math.min(1, _dtMw * 3);
-          amp += (MW_FPS[0] - amp) * mwK;
-          gamma += (MW_FPS[1] - gamma) * mwK;
+          amp += (fpsT[0] - amp) * mwK;
+          gamma += (fpsT[1] - gamma) * mwK;
           U.uBright.value = Math.max(0, amp);
           U.uLinear.value = 1;
           U.uSkyGamma.value = gamma;
@@ -5525,6 +5747,18 @@ const minPix = 3;
       window.SW_TEST = {
         orient: orientToView,
         art: () => SkyW.artTest(),
+        pick: i => pick(i),
+        rec: n => {
+          _rec = { n, a: [], p0: C.position.toArray(), f0: C.getWorldDirection(new TH.Vector3()).toArray() };
+        },
+        recGet: () => _rec && { p0: _rec.p0, f0: _rec.f0, a: _rec.a },
+        camState: () => ({ p: C.position.toArray(), f: C.getWorldDirection(new TH.Vector3()).toArray(), t: wpos(cur).toArray(), o: camOff.toArray(), fly: !!camFly, flyU, flyLam, flyDur }),
+        setOrbit: (a, b) => {
+          th = a;
+          ph = b;
+        },
+        targets: () => targets.map(t => t.n),
+        dust: () => ({ k: +dustK.toFixed(3), visible: dust.visible, flight: dustFlight, v: dustV, nv: dustV / Math.max(dd, 1e-9), kc: dustKc, flow: dustFlow, dist, dd, off: off.length(), w: dust.material.uniforms.uW.value.map(x => +x.toFixed(2)) }),
         cam: () => ({ hRel: fpsHRel, near: C.near, dist: C.position.length() }),
         artDir: id => SkyW.artDir(id),
         pin: () => SkyW.pinTest(),
