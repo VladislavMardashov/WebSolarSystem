@@ -5286,6 +5286,8 @@ const minPix = 3;
       }
       sky.scale.setScalar(Math.max(1, dist / 1000));
       sky.position.copy(C.position);
+      SkyW.update();
+      skySync();
       if (DUST_ON) {
         /* скорость камеры относительно объекта назначения: разность положений за кадр (rel = off + camOff) */
         _dRel.copy(off).add(camOff);
