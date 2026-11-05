@@ -1,4 +1,17 @@
 const SHD = window.SW_SHADERS || {};
+/* Кэш размеров окна. Чтение innerWidth/innerHeight в Chrome принудительно пересчитывает стиль и раскладку DOM (профайлер показал 30–60 мс на телефоне
+   в первом чтении кадра, после записей подписей в предыдущем кадре). В покадровом коде читаем _VW/_VH; обновляются по resize. */
+let _VW = innerWidth,
+  _VH = innerHeight;
+{
+  const _vp = () => {
+    _VW = innerWidth;
+    _VH = innerHeight;
+  };
+  addEventListener('resize', _vp);
+  addEventListener('orientationchange', _vp);
+  if (window.visualViewport) visualViewport.addEventListener('resize', _vp);
+}
 /* === i18n: исходные строки — русские и служат ключами словаря; переводы в lang/uk.js, lang/en.js === */
 const SW_LANG = (() => {
   try {
@@ -2067,7 +2080,7 @@ const minPix = 3;
   }
   function lodPx(pos, R) {
       const d = Math.max(1e-9, pos.distanceTo(C.position));
-      return (R * innerHeight) / (2 * Math.tan((C.fov * PI) / 360) * d);
+      return (R * _VH) / (2 * Math.tan((C.fov * PI) / 360) * d);
     }
     function lodUpdate() {
       let ch = false;
@@ -2270,16 +2283,16 @@ const minPix = 3;
         }
         l.obj.getWorldPosition(v);
         v.project(C);
-        const x = (v.x * 0.5 + 0.5) * innerWidth,
-          y = (-v.y * 0.5 + 0.5) * innerHeight;
+        const x = (v.x * 0.5 + 0.5) * _VW,
+          y = (-v.y * 0.5 + 0.5) * _VH;
         if (
           v.z > 1 ||
           !isFinite(x) ||
           !isFinite(y) ||
           x < -24 ||
-          x > innerWidth + 24 ||
+          x > _VW + 24 ||
           y < -12 ||
-          y > innerHeight + 12
+          y > _VH + 12
         ) {
           l.el.classList.remove('show');
           return;
@@ -3003,6 +3016,7 @@ const minPix = 3;
           const lay = es.reduce((m, e) => Math.max(m, e.lay || 0), 0);
           if (sp.gpu >= 0 && sp.gpu - med.gpu > 0.5 * dT) s = 'GPU (' + f1(sp.gpu) + ' мс, обычно ' + f1(med.gpu) + ')';
           else if (lay > 8) s = 'стиль/раскладка DOM (' + f1(lay) + ' мс)';
+          else if (es.some(e => e.d >= 0.6 * sp.per && !e.evn && e.scr !== undefined && e.scr < 0.3 * e.d)) s = 'главный поток заблокирован вне JS (LoAF: задачи без скриптов) — типично ожидание GPU / композитора';
           else s = 'после колбэка: композитор / растеризация DOM / vsync' + (sp.gpu < 0 ? ' или GPU (таймера нет)' : '');
         } else if (t0) {
           s = t0.n;
@@ -3158,6 +3172,7 @@ const minPix = 3;
           evs.unshift({
             s: e.startTime,
             d: e.duration,
+            scr,
             lay: sty + forced,
             txt:
               'LoAF ' + e.duration.toFixed(0) + 'мс: скрипты ' + scr.toFixed(0) + (forced > 1 ? ' (из них принуд. раскладка ' + forced.toFixed(0) + ')' : '') +
@@ -3178,7 +3193,16 @@ const minPix = 3;
         for (const e of es) {
           const pr = e.processingEnd - e.processingStart;
           if (pr < 8 && e.duration < 100) continue;
+          const h = evs[0];
+          if (h && h.evn && Math.abs(h.s - e.startTime) < 2 && h.d === e.duration) {
+            if (h.evn.indexOf(e.name) < 0) h.evn.push(e.name);
+            h.txt = 'события ' + h.evn.join('/') + ' ' + e.duration + 'мс (обработчик ≤' + Math.max(h.pr, pr).toFixed(0) + ', ожидание ввода ' + (e.processingStart - e.startTime).toFixed(0) + ')';
+            h.pr = Math.max(h.pr, pr);
+            continue;
+          }
           evs.unshift({
+            evn: [e.name],
+            pr,
             s: e.startTime,
             d: e.duration,
             txt: 'событие ' + e.name + ' ' + e.duration + 'мс (обработчик ' + pr.toFixed(0) + ', ожидание ввода ' + (e.processingStart - e.startTime).toFixed(0) + ')',
@@ -4500,10 +4524,10 @@ const minPix = 3;
       }
       function fitCv() {
         const d = Math.min(devicePixelRatio || 1, 2);
-        if (cw !== innerWidth || ch !== innerHeight || cdpr !== d) {
+        if (cw !== _VW || ch !== _VH || cdpr !== d) {
           if (cdpr !== d) LBL.clear();
-          cw = innerWidth;
-          ch = innerHeight;
+          cw = _VW;
+          ch = _VH;
           cdpr = d;
           cvl.width = Math.round(cw * d);
           cvl.height = Math.round(ch * d);
@@ -5012,15 +5036,15 @@ const minPix = 3;
           l.el.classList.remove('show');
           continue;
         }
-        const x = (_hlProj.x * 0.5 + 0.5) * innerWidth,
-          y = (-_hlProj.y * 0.5 + 0.5) * innerHeight;
+        const x = (_hlProj.x * 0.5 + 0.5) * _VW,
+          y = (-_hlProj.y * 0.5 + 0.5) * _VH;
         if (
           !isFinite(x) ||
           !isFinite(y) ||
           x < -40 ||
-          x > innerWidth + 40 ||
+          x > _VW + 40 ||
           y < -30 ||
-          y > innerHeight + 30
+          y > _VH + 30
         ) {
           l.el.classList.remove('show');
           continue;
@@ -5602,7 +5626,7 @@ const minPix = 3;
       {
         const distSun = C.position.distanceTo(sunM.position);
         const minPx = 3;
-        const minAng = (minPx * ((C.fov * PI) / 180)) / innerHeight;
+        const minAng = (minPx * ((C.fov * PI) / 180)) / _VH;
         const sunRvis = Math.max(sunBaseScale, distSun * minAng * 0.5);
         sunM.scale.setScalar(sunRvis);
         const refDist = real ? AU_TO_UNITS * 3 : 40;
@@ -5675,7 +5699,7 @@ const minPix = 3;
           if (!b.m) continue;
           if (real) {
             const dCam = C.position.distanceTo(b.g.position);
-            const pixDiam = dCam > 0.01 ? (innerHeight * b.r) / (dCam * fovTan) : 1e9;
+            const pixDiam = dCam > 0.01 ? (_VH * b.r) / (dCam * fovTan) : 1e9;
             if (b.baseMScale) {
               const minMul = pixDiam > 0.01 ? Math.max(1, minPix / pixDiam) : 1;
               b.m.scale.set(b.baseMScale.x * minMul, b.baseMScale.y * minMul, b.baseMScale.z * minMul);
@@ -5683,7 +5707,7 @@ const minPix = 3;
             if (b.dot) {
               const fade = 1 - _sstep(1, 6, pixDiam);
               if (fade > 0.01 && dCam > 0.01) {
-                const dotUnit = (2 * dCam * fovTan * dotPxTarget) / innerHeight;
+                const dotUnit = (2 * dCam * fovTan * dotPxTarget) / _VH;
                 b.dot.scale.set(dotUnit, dotUnit, 1);
                 b.dot.material.opacity = fade * 0.85;
                 b.dot.visible = true;
