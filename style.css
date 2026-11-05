@@ -15,8 +15,25 @@ button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 #skySimCtl .v{font-family:ui-monospace,monospace;font-size:10.5px;color:#e9edf5;min-width:34px;text-align:right;opacity:.9}
 #load{position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .6s}
 #load.done{opacity:0;pointer-events:none}
-#load .spinner{width:48px;height:48px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--acc);border-radius:50%;animation:_spin 1s linear infinite;display:block;flex:none;box-sizing:border-box}
-@keyframes _spin{to{transform:rotate(360deg)}}
+/* Экран загрузки: процедурная планетная система (структуру строит скрипт в index.html, движение — CSS на потоке композитора) */
+#orrery{position:relative;width:220px;height:220px;flex:none;animation:orrIn .8s ease-out both}
+@keyframes orrIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+@keyframes orb{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes tw{0%,100%{opacity:.12}50%{opacity:.85}}
+@keyframes pulse{from{transform:scale(.93)}to{transform:scale(1.08)}}
+#orrery>.s{position:absolute;left:110px;top:110px;border-radius:50%;animation:pulse 2.6s ease-in-out infinite alternate}
+#orrery .o,#orrery .b{position:absolute;transform:rotate(var(--ph,0deg));animation:orb linear infinite;will-change:transform}
+#orrery .o{border-radius:50%;border:1px solid rgba(255,255,255,.07);box-sizing:border-box}
+#orrery .b{width:0;height:0}
+#orrery .t{position:absolute;inset:-1px;border-radius:50%;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px))}
+#orrery .p{position:absolute;left:50%;top:0;border-radius:50%}
+#orrery .rg{position:absolute;border:1px solid;border-radius:50%}
+#orrery .m{position:absolute;left:50%;top:0;border-radius:50%;animation:orb linear infinite}
+#orrery .mm{position:absolute;left:50%;top:0;width:1.7px;height:1.7px;margin:-.85px 0 0 -.85px;background:#cfd6e6;border-radius:50%}
+#orrery .a{position:absolute;width:1.2px;height:1.2px;margin:-.6px 0 0 -.6px;border-radius:50%;background:#aab0c0}
+#load .k{position:absolute;border-radius:50%;background:#fff;opacity:.12;animation:tw ease-in-out infinite}
+#load .tag{font-size:11px;letter-spacing:.18em;opacity:.38;color:var(--fg);margin-top:-6px}
+@media (prefers-reduced-motion:reduce){#orrery .o,#orrery .b,#orrery .m,#orrery>.s,#load .k{animation:none}}
 #load .pb{width:min(260px,70vw);height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
 #load .pb i{display:block;height:100%;width:0;background:var(--acc);transition:width .25s}
 #load .tx{font-size:13px;opacity:.75;color:var(--fg)}

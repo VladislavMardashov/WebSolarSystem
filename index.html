@@ -5,10 +5,109 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Солнечная система 3D</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='14' fill='%23f6b34a'/%3E%3Cellipse cx='32' cy='32' rx='28' ry='9' fill='none' stroke='%23cfd6e6' stroke-width='3' transform='rotate(-20 32 32)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
-<div id="load"><div class="spinner" aria-label="Загрузка"></div><div class="pb"><i></i></div><div class="tx">Загрузка…</div></div>
+<div id="load"><div id="orrery" role="img" aria-label="Загрузка"></div><div class="pb"><i></i></div><div class="tx">Загрузка…</div></div>
+<script>
+/* Экран загрузки: при каждом запуске — новая процедурно сгенерированная планетная система.
+   Генерируется только структура (div'ы), а движение — CSS-анимации transform/opacity: они идут на потоке композитора
+   и не замирают, пока основной поток занят прогревом шейдеров и заливкой текстур (canvas+requestAnimationFrame в такие моменты вставал бы).
+   Внутри #load нельзя использовать <i> (первый <i> — полоса прогресса) и класс .tx (строка статуса): их ищет app.js. */
+(function () {
+  try {
+    const box = document.getElementById('orrery');
+    if (!box) return;
+    let seed = (window.crypto && crypto.getRandomValues ? crypto.getRandomValues(new Uint32Array(1))[0] : Math.random() * 4294967296) >>> 0;
+    const id = seed;
+    const rnd = () => { /* mulberry32 */
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const R = 110,
+      pick = a => a[Math.floor(rnd() * a.length)],
+      hs = (h, s, l, a) => 'hsl(' + Math.round(h) + ' ' + Math.round(s) + '% ' + Math.round(l) + '%' + (a === undefined ? '' : ' / ' + a) + ')',
+      el = (cls, css, par) => {
+        const d = document.createElement('div');
+        d.className = cls;
+        if (css) d.style.cssText = css;
+        par.appendChild(d);
+        return d;
+      };
+    /* звезда: спектральный класс → цвет и размер */
+    const st = pick([[12, 95, 58, 9.5], [26, 95, 60, 8.5], [44, 95, 66, 8], [52, 70, 88, 7.5], [212, 90, 86, 7]]),
+      sr = st[3];
+    el('s', 'width:' + 2 * sr + 'px;height:' + 2 * sr + 'px;margin:' + -sr + 'px 0 0 ' + -sr + 'px;background:radial-gradient(circle,#fff 0,' + hs(st[0], st[1], st[2]) + ' 55%,' + hs(st[0], st[1], st[2], 0.3) + ' 100%);box-shadow:0 0 14px 4px ' + hs(st[0], st[1], st[2], 0.55) + ',0 0 46px 12px ' + hs(st[0], st[1], st[2], 0.22), box);
+    /* орбиты растут примерно геометрически, как у настоящих систем */
+    const N = 3 + Math.floor(rnd() * 5),
+      r0 = 24 + rnd() * 8,
+      g = Math.pow((R - 9) / r0, 1 / N),
+      radii = [];
+    for (let k = 0; k < N; k++) radii.push(Math.min(R - 6, r0 * Math.pow(g, k) * (1 + (rnd() - 0.5) * 0.12)));
+    const T0 = 1.5 + rnd() * 0.8; /* период внутренней планеты, с; остальные по 3-му закону Кеплера: T ∝ r^1.5 */
+    /* пояс астероидов в самом широком промежутке между орбитами */
+    let gap = -1,
+      gw = 13;
+    for (let k = 0; k < N - 1; k++)
+      if (radii[k + 1] - radii[k] > gw) {
+        gw = radii[k + 1] - radii[k];
+        gap = k;
+      }
+    if (gap >= 0 && rnd() < 0.75) {
+      const rb = (radii[gap] + radii[gap + 1]) / 2,
+        T = T0 * Math.pow(rb / r0, 1.5),
+        b = el('b', 'left:' + R + 'px;top:' + R + 'px;--ph:' + Math.round(rnd() * 360) + 'deg;animation-duration:' + T.toFixed(2) + 's;animation-delay:-' + (T * rnd()).toFixed(2) + 's', box),
+        n = 34 + Math.floor(rnd() * 26);
+      for (let q = 0; q < n; q++) {
+        const an = rnd() * 6.2832,
+          rr = rb + (rnd() - 0.5) * Math.min(7, gw * 0.45);
+        el('a', 'left:' + (rr * Math.cos(an)).toFixed(1) + 'px;top:' + (rr * Math.sin(an)).toFixed(1) + 'px;opacity:' + (0.35 + rnd() * 0.5).toFixed(2), b);
+      }
+    }
+    let ringed = false;
+    for (let k = 0; k < N; k++) {
+      const r = radii[k],
+        gas = rnd() < 0.15 + 0.7 * (k / Math.max(1, N - 1)),
+        ice = !gas && rnd() < 0.25,
+        h = gas ? pick([28, 36, 44, 200, 208, 18]) : ice ? 190 + rnd() * 25 : pick([8, 20, 32, 205, 215, 150, 270]),
+        sat = gas ? 45 + rnd() * 25 : ice ? 40 + rnd() * 15 : 20 + rnd() * 35,
+        lum = gas ? 62 + rnd() * 12 : ice ? 74 + rnd() * 6 : 52 + rnd() * 16,
+        s = gas ? 4.4 + rnd() * 2.2 : 2.2 + rnd() * 1.5,
+        T = T0 * Math.pow(r / r0, 1.5),
+        o = el('o', 'width:' + 2 * r + 'px;height:' + 2 * r + 'px;left:' + (R - r) + 'px;top:' + (R - r) + 'px;--ph:' + Math.round(rnd() * 360) + 'deg;animation-duration:' + T.toFixed(2) + 's;animation-delay:-' + (T * rnd()).toFixed(2) + 's', box),
+        len = 0.1 + rnd() * 0.14;
+      /* след за планетой: дуга, затухающая к хвосту (она же показывает орбиту) */
+      el('t', 'background:conic-gradient(from 0deg,transparent 0 ' + ((1 - len) * 100).toFixed(1) + '%,' + hs(h, sat, lum, 0.55) + ' 100%)', o);
+      const pl = el('p', 'width:' + s.toFixed(1) + 'px;height:' + s.toFixed(1) + 'px;margin:' + (-s / 2).toFixed(2) + 'px 0 0 ' + (-s / 2).toFixed(2) + 'px;background:radial-gradient(circle,' + hs(h, sat, lum + 14) + ',' + hs(h, sat, lum - 8) + ');box-shadow:0 0 ' + (s * 1.4).toFixed(1) + 'px ' + hs(h, sat, lum, 0.45), o);
+      if (gas && !ringed && rnd() < 0.55) {
+        ringed = true;
+        el('rg', 'width:' + (s * 2.5).toFixed(1) + 'px;height:' + (s * 0.9).toFixed(1) + 'px;margin:' + (s * 0.05).toFixed(2) + 'px 0 0 ' + (-s * 0.75).toFixed(2) + 'px;border-color:' + hs(h, sat, lum, 0.75) + ';transform:rotate(' + Math.round(-25 + rnd() * 50) + 'deg)', pl);
+      }
+      const moons = gas ? Math.floor(rnd() * 3) : rnd() < 0.3 ? 1 : 0;
+      for (let m = 0; m < moons; m++) {
+        const mr = s * (1.1 + m * 0.7) + 2,
+          mo = el('m', 'width:' + (2 * mr).toFixed(1) + 'px;height:' + (2 * mr).toFixed(1) + 'px;margin:' + (-mr).toFixed(1) + 'px 0 0 ' + (-mr).toFixed(1) + 'px;animation-duration:' + (0.9 + rnd() * 1.8 + m * 1.2).toFixed(2) + 's;animation-delay:-' + (rnd() * 3).toFixed(2) + 's' + (rnd() < 0.5 ? ';animation-direction:reverse' : ''), o);
+        el('mm', '', mo);
+      }
+    }
+    /* мерцающий фон */
+    const load = document.getElementById('load');
+    for (let q = 0; q < 56; q++) {
+      const sz = rnd() < 0.15 ? 2 : 1;
+      el('k', 'left:' + (rnd() * 100).toFixed(1) + '%;top:' + (rnd() * 100).toFixed(1) + '%;width:' + sz + 'px;height:' + sz + 'px;animation-duration:' + (1.8 + rnd() * 3.5).toFixed(2) + 's;animation-delay:-' + (rnd() * 5).toFixed(2) + 's', load);
+    }
+    /* обозначение системы (нейтральное для всех языков) */
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.textContent = pick(['HD', 'HIP', 'GJ', 'TOI', 'KOI']) + '-' + (1000 + (id % 9000));
+    box.after(tag);
+  } catch (e) {
+    /* без анимации загрузка всё равно работает */
+  }
+})();
+</script>
 <div id="topRight"><div id="info"></div></div>
 <div id="bar"></div>
 <div id="errPanel"></div>
