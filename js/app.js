@@ -2599,9 +2599,23 @@ const minPix = 3;
       skyHud.style.display = fpsState === 'stand' ? '' : 'none';
     }
 
+    /* ===== ПРОФАЙЛЕР (временный) =====
+       Что умеет:
+       • период каждого кадра (интервал между началами rAF) и его разбор на части: старт до rAF → колбэк (логика / рендер / подписи) → хвост после колбэка;
+         кадр разбирается ПОСЛЕ того, как стал известен его период, поэтому виноват именно тот кадр, который затянул интервал (раньше смотрели на следующий);
+       • секции CPU: PT && PT('имя') ставится в коде, время от предыдущей метки уходит в секцию; в отчёте — среднее / максимум / сколько раз секция была главным виновником всплеска;
+       • GPU-время каждого кадра (EXT_disjoint_timer_query_webgl2) привязано к своему кадру; без расширения — кнопка «GPU-синхр.» (gl.finish после рендера);
+       • автоснимок состояния на каждом кадре (режим, цель, скорость, перелёт, число программ/текстур/геометрий, обновления теней, dpr) и разница с прошлым кадром у всплеска;
+       • Long Animation Frames / Long Tasks / Event Timing: чужие скрипты, принудительная раскладка, стиль/раскладка, медленные обработчики событий (с адресом в app.js);
+       • подозрение на GC по падению JS-кучи и оценка скорости аллокаций;
+       • гистограмма кадров, среднее по режимам, вердикт «CPU / GPU / браузер», график последних кадров, выгрузка полного лога в JSON.
+       PM && PM('текст') — поставить метку в хронологию событий. */
+    var PT = null; /* хук секций: PT && PT('имя'); работает только при включённом профайлере */
+    var PM = null; /* хук меток: PM && PM('текст') */
     const PROF = (() => {
       const P = {
         on: false,
+        sync: false,
         off: {
           sky: false,
           dome: false,
@@ -2611,34 +2625,116 @@ const minPix = 3;
           sun: false,
           shadows: false,
           ground: false,
+          labels: false,
+          orbits: false,
+          dust: false,
+          render: false,
         },
       };
+      const N = 900 /* кадров в кольце */,
+        SMAX = 48 /* секций */,
+        W = 600 /* окно статистики */,
+        SNN = 12 /* полей в снимке состояния */,
+        SENS = [1.25, 1.5, 2];
+      const SNL = ['состояние', 'цель', 'скорость', 'real', 'перелёт', 'камера-перелёт', 'пыль-полёт', 'обн.теней', 'программы', 'текстуры', 'геометрии', 'dpr×100'];
       const gl = renderer.getContext(),
         ext = gl.getExtension('EXT_disjoint_timer_query_webgl2'),
         dbg = gl.getExtension('WEBGL_debug_renderer_info'),
         gpuName = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '?';
-      const dts = [],
-        spikes = [],
-        pend = [],
-        bs = new TH.Vector2();
-      let last = 0,
-        t0 = 0,
+      const bs = new TH.Vector2();
+      /* кольцо кадров */
+      const fT = new Float64Array(N),
+        fPer = new Float32Array(N),
+        fSd = new Float32Array(N),
+        fL = new Float32Array(N),
+        fR = new Float32Array(N),
+        fP = new Float32Array(N),
+        fBusy = new Float32Array(N),
+        fGpu = new Float32Array(N),
+        fCalls = new Float32Array(N),
+        fTris = new Float32Array(N),
+        fHeap = new Float32Array(N),
+        fSec = new Float32Array(N * SMAX),
+        fSn = new Int32Array(N * SNN);
+      const secCur = new Float64Array(SMAX),
+        secAvg = new Float64Array(SMAX),
+        sTop = new Int32Array(SMAX),
+        snames = [],
+        sidx = new Map();
+      const spikes = [],
+        spikeByF = new Map(),
+        worst = [],
+        evs = [],
+        pool = new Map(),
+        poolArr = [];
+      const pendQ = [],
+        pendF = [];
+      const info = { c: 0, t: 0, p: 0, l: 0, g: 0, x: 0, pr: 0 };
+      const med = { per: 16.7, sd: 0, L: 0, R: 0, P: 0, busy: 0, tail: 0, gpu: 0 };
+      let fid = -1,
+        done = false,
+        inF = false,
+        tm = 0,
+        tB = 0,
         tR0 = 0,
         tR1 = 0,
         q = null,
+        qf = -1,
         tShow = 0,
-        medDt = 16.7,
-        lastHeap = 0,
-        info = { c: 0, t: 0, p: 0, l: 0, g: 0, x: 0, pr: 0 },
-        ms = { l: 0, r: 0, p: 0, g: 0, gn: 0, n: 0, a: 0, b: 0, c: 0 },
-        tm0 = 0;
+        uiPend = false,
+        skipNext = false,
+        sens = 1,
+        lastGpu = 0,
+        hasLoaf = false,
+        hasLt = false,
+        hasEv = false,
+        rep = null,
+        obs = [];
+      const sc = {};
+      ['per', 'sd', 'L', 'R', 'P', 'busy', 'tail', 'gpu'].forEach(k => (sc[k] = new Float64Array(W)));
+      const tmp = new Float64Array(W);
+      const pid = s => {
+        let i = pool.get(s);
+        if (i === undefined) {
+          i = poolArr.length;
+          pool.set(s, i);
+          poolArr.push(s);
+        }
+        return i;
+      };
+      const sid = name => {
+        let i = sidx.get(name);
+        if (i === undefined) {
+          if (snames.length >= SMAX) return SMAX - 1;
+          i = snames.length;
+          sidx.set(name, i);
+          snames.push(name);
+        }
+        return i;
+      };
+      const medOf = (a, n) => {
+        if (!n) return 0;
+        const t = tmp.subarray(0, n);
+        t.set(a.subarray(0, n));
+        t.sort();
+        return t[n >> 1];
+      };
+      const f1 = v => v.toFixed(1);
+      const shortUrl = u => (u ? String(u).split('/').pop().split('?')[0] : '?');
+
+      /* ---------- панель ---------- */
       const el = document.createElement('div');
       el.id = 'prof';
       el.style.display = 'none';
       const bar = document.createElement('div');
       bar.className = 'pbar';
+      const cv = document.createElement('canvas');
+      cv.width = 360;
+      cv.height = 64;
+      cv.style.cssText = 'position:static;inset:auto;width:100%;height:64px;margin-top:6px;display:block;background:#02040a;border-radius:6px;touch-action:auto';
+      const cx = cv.getContext('2d');
       const pre = document.createElement('pre');
-      el.append(bar, pre);
+      el.append(bar, cv, pre);
       document.body.append(el);
       const mk = (label, fn) => {
         const b = document.createElement('button');
@@ -2676,6 +2772,10 @@ const minPix = 3;
         },
         shadows: () => {},
         ground: () => {},
+        labels: () => {},
+        orbits: () => {},
+        dust: () => {},
+        render: () => {},
       };
       const chips = {};
       [
@@ -2687,6 +2787,10 @@ const minPix = 3;
         ['sun', 'Свет Солнца'],
         ['shadows', 'Тени'],
         ['ground', 'Фейк-земля'],
+        ['labels', 'Подписи DOM'],
+        ['orbits', 'Орбиты'],
+        ['dust', 'Пыль'],
+        ['render', 'Без рендера'],
       ].forEach(([k, t]) => {
         chips[k] = mk(t, b => {
           P.off[k] = !P.off[k];
@@ -2694,9 +2798,7 @@ const minPix = 3;
           if (!P.off[k]) rest[k]();
         });
       });
-      const dprs = [
-        ...new Set([0.75, 1, 1.25, 1.5, 2, 2.5, 3, Math.round((devicePixelRatio || 1) * 100) / 100]),
-      ].sort((a, b) => a - b);
+      const dprs = [...new Set([0.75, 1, 1.25, 1.5, 2, 2.5, 3, Math.round((devicePixelRatio || 1) * 100) / 100])].sort((a, b) => a - b);
       const dprB = mk('Разр.', b => {
         let i = dprs.findIndex(v => Math.abs(v - renderer.getPixelRatio()) < 0.01);
         i = (i + 1) % dprs.length;
@@ -2705,22 +2807,29 @@ const minPix = 3;
         b.textContent = 'Разр. ×' + dprs[i];
       });
       dprB.textContent = 'Разр. ×' + Math.round(renderer.getPixelRatio() * 100) / 100;
-      mk('Сброс', () => {
-        dts.length = 0;
-        spikes.length = 0;
-        ms.l = ms.r = ms.p = ms.g = ms.gn = ms.n = ms.a = ms.b = ms.c = 0;
+      const sensB = mk('Порог ×' + SENS[sens], b => {
+        sens = (sens + 1) % SENS.length;
+        b.textContent = 'Порог ×' + SENS[sens];
       });
+      sensB.title = 'Кадр считается всплеском, если он длиннее медианы во столько раз (и не менее чем на 3.5 мс)';
+      const syncB = mk('GPU-синхр.', b => {
+        P.sync = !P.sync;
+        b.classList.toggle('off', P.sync);
+        b.textContent = P.sync ? 'GPU-синхр. ВКЛ' : 'GPU-синхр.';
+      });
+      syncB.title = 'gl.finish() после рендера: время «рендера» включает ожидание GPU. Нужно там, где нет EXT_disjoint_timer_query. Искажает конвейер — включать только для замера';
+      mk('Сброс', () => resetData());
       const cpB = mk('Копировать отчёт', () => {
         const t = reportText();
-        const done = () => {
+        const done2 = () => {
           cpB.textContent = 'Скопировано ✓';
           setTimeout(() => (cpB.textContent = 'Копировать отчёт'), 1500);
         };
-        if (navigator.clipboard && window.isSecureContext)
-          navigator.clipboard.writeText(t).then(done, () => fb(t, done));
-        else fb(t, done);
+        if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done2, () => fb(t, done2));
+        else fb(t, done2);
       });
-      function fb(t, done) {
+      mk('Скачать лог', () => dumpLog());
+      function fb(t, done2) {
         const ta = document.createElement('textarea');
         ta.value = t;
         ta.style.cssText = 'position:fixed;left:0;top:0;opacity:0';
@@ -2728,166 +2837,215 @@ const minPix = 3;
         ta.select();
         try {
           document.execCommand('copy');
-          done();
+          done2();
         } catch (e) {
           prompt('Скопируй отчёт:', t);
         }
         ta.remove();
       }
+
+      /* ---------- сбор данных ---------- */
+      function resetData() {
+        fid = -1;
+        done = false;
+        inF = false;
+        skipNext = false;
+        fPer.fill(-1);
+        fGpu.fill(-1);
+        fHeap.fill(0);
+        sTop.fill(0);
+        spikes.length = 0;
+        spikeByF.clear();
+        worst.length = 0;
+        evs.length = 0;
+        rep = null;
+        med.per = 16.7;
+        med.sd = med.L = med.R = med.P = med.busy = med.tail = med.gpu = 0;
+        secAvg.fill(0);
+      }
+      resetData();
       function poll() {
-        for (let i = pend.length - 1; i >= 0; i--) {
-          const x = pend[i];
+        for (let i = pendQ.length - 1; i >= 0; i--) {
+          const x = pendQ[i];
           if (gl.getQueryParameter(x, gl.QUERY_RESULT_AVAILABLE)) {
             if (!gl.getParameter(ext.GPU_DISJOINT_EXT)) {
-              const v = gl.getQueryParameter(x, gl.QUERY_RESULT) / 1e6;
-              ms.g += v;
-              ms.gn++;
-              info.gpu = v;
+              const v = gl.getQueryParameter(x, gl.QUERY_RESULT) / 1e6,
+                f = pendF[i];
+              if (f > fid - N) fGpu[f % N] = v;
+              const sp = spikeByF.get(f);
+              if (sp) sp.gpu = v;
+              lastGpu = v;
             }
             gl.deleteQuery(x);
-            pend.splice(i, 1);
+            pendQ.splice(i, 1);
+            pendF.splice(i, 1);
           }
         }
       }
-      function stats() {
-        const d = dts.slice(-300),
-          n = d.length;
-        if (!n) return null;
-        const a = d.reduce((x, y) => x + y, 0) / n,
-          so = d.slice().sort((x, y) => x - y);
-        return {
-          n,
-          fps: 1000 / a,
-          low1: 1000 / so[Math.min(n - 1, Math.floor(0.99 * n))],
-          max: so[n - 1],
-          med: so[n >> 1],
-          n33: d.filter(x => x > 33.4).length,
+      function snap(s) {
+        const o = s * SNN;
+        fSn[o] = pid(fpsState);
+        fSn[o + 1] = pid((cur && cur.k) || '-');
+        fSn[o + 2] = spI;
+        fSn[o + 3] = real ? 1 : 0;
+        fSn[o + 4] = flyPath ? 1 : 0;
+        fSn[o + 5] = camFly ? 1 : 0;
+        fSn[o + 6] = dustFlight ? 1 : 0;
+        fSn[o + 7] = shUpdN;
+        fSn[o + 8] = info.pr;
+        fSn[o + 9] = info.x;
+        fSn[o + 10] = info.g;
+        fSn[o + 11] = Math.round(renderer.getPixelRatio() * 100);
+      }
+      function diffSn(f) {
+        if (f < 1) return '';
+        const a = ((f - 1) % N) * SNN,
+          b = (f % N) * SNN;
+        let r = '';
+        for (let j = 0; j < SNN; j++)
+          if (fSn[a + j] !== fSn[b + j]) {
+            const fm = j < 2 ? v => poolArr[v] : v => v;
+            r += (r ? ', ' : '') + SNL[j] + ' ' + fm(fSn[a + j]) + '→' + fm(fSn[b + j]);
+          }
+        return r;
+      }
+      const heapDrop = (a, b) => {
+        const x = fHeap[((a % N) + N) % N],
+          y = fHeap[b % N];
+        return x > 0 && y > 0 && x - y > 1.5;
+      };
+      function finalize(f, per) {
+        const s = f % N;
+        if (skipNext || per > 1500 || per <= 0) {
+          fPer[s] = -1;
+          skipNext = false;
+          return;
+        }
+        fPer[s] = per;
+        if (f < 30) return;
+        const thr = Math.max(med.per * SENS[sens], med.per + 3.5),
+          busy = fBusy[s];
+        const byPeriod = per > thr,
+          byCpu = !byPeriod && busy > Math.max(med.busy * 2.2, med.busy + 6);
+        if (byPeriod || byCpu) addSpike(f, per, byPeriod);
+      }
+      function addSpike(f, per, isFrame) {
+        const s = f % N,
+          o = s * SMAX,
+          nS = snames.length;
+        const dv = [];
+        for (let j = 0; j < nS; j++) {
+          const v = fSec[o + j];
+          if (v > 0.05) dv.push({ j, n: snames[j], v, d: v - secAvg[j] });
+        }
+        dv.sort((a, b) => b.d - a.d);
+        const topA = dv.filter(x => x.d > 0.5).slice(0, 3);
+        if (topA.length) sTop[topA[0].j]++;
+        const sp = {
+          f,
+          t: fT[s],
+          per,
+          kind: isFrame ? 0 : 1,
+          sd: fSd[s],
+          L: fL[s],
+          R: fR[s],
+          P: fP[s],
+          busy: fBusy[s],
+          tail: per - fSd[s] - fBusy[s],
+          calls: fCalls[s],
+          tris: fTris[s],
+          gpu: fGpu[s],
+          topA,
+          chg: diffSn(f),
+          gc: heapDrop(f - 1, f),
+          st: poolArr[fSn[s * SNN]] + '·' + poolArr[fSn[s * SNN + 1]],
+          ext: null,
         };
+        spikes.unshift(sp);
+        spikeByF.set(f, sp);
+        if (spikes.length > 150) {
+          const d = spikes.pop();
+          spikeByF.delete(d.f);
+        }
+        if (isFrame) {
+          worst.push(sp);
+          worst.sort((a, b) => b.per - a.per);
+          if (worst.length > 5) worst.length = 5;
+        }
       }
-      function reportText() {
-        const S = stats(),
-          f = v => v.toFixed(1),
-          n = Math.max(1, ms.n);
-        bs.set(0, 0);
-        renderer.getDrawingBufferSize(bs);
-        const mem = performance.memory
-          ? (performance.memory.usedJSHeapSize / 1048576).toFixed(0) + ' МБ'
-          : 'n/a';
-        let t =
-          'FPS ' +
-          (S ? f(S.fps) : '-') +
-          ' (ср.)  1%-low ' +
-          (S ? f(S.low1) : '-') +
-          '  макс.кадр ' +
-          (S ? f(S.max) + ' мс' : '-') +
-          '  кадров>33мс: ' +
-          (S ? S.n33 + '/' + S.n : '-') +
-          '\n';
-        t +=
-          'CPU/кадр: логика ' +
-          f(ms.l / n) +
-          '  рендер(отправка) ' +
-          f(ms.r / n) +
-          '  пост ' +
-          f(ms.p / n) +
-          ' мс\n';
-        t +=
-          'пост по частям: подписи DOM ' +
-          f(ms.a / n) +
-          '  горизонт ' +
-          f(ms.b / n) +
-          '  небо(canvas+созвездия) ' +
-          f(ms.c / n) +
-          ' мс\n';
-        t +=
-          'GPU/кадр: ' +
-          (ext ? (ms.gn ? f(ms.g / ms.gn) + ' мс' : 'ждём…') : 'n/a (нет EXT_disjoint_timer_query)') +
-          '\n';
-        t +=
-          'Вызовы ' +
-          info.c +
-          '  Треуг. ' +
-          info.t +
-          '  Точки ' +
-          info.p +
-          '  Линии ' +
-          info.l +
-          '\nГеометрий ' +
-          info.g +
-          '  Текстур ' +
-          info.x +
-          '  Программ ' +
-          info.pr +
-          '\n';
-        t +=
-          'Буфер ' +
-          bs.x +
-          '×' +
-          bs.y +
-          ' (dpr ' +
-          renderer.getPixelRatio().toFixed(2) +
-          ') Q=' +
-          Q_LABEL +
-          '  тени ' +
-          (renderer.shadowMap.enabled
-            ? SHADOW_CACHE
-              ? 'кэш (обн. ' + shUpdN + ')'
-              : renderer.shadowMap.autoUpdate
-                ? 'вкл'
-                : 'заморожены'
-            : 'выкл') +
-          ' ' +
-          Q.shadowSize +
-          '\n';
-        t += 'JS heap ' + mem + '  состояние ' + fpsState + '  real=' + real + '\n';
-        t +=
-          'A/B выкл: ' +
-          (Object.keys(P.off)
-            .filter(k => P.off[k])
-            .join(', ') || '—') +
-          '\n';
-        t +=
-          'Всплески (последние):\n' +
-          (spikes.length
-            ? spikes
-                .slice(0, 8)
-                .map(x => x)
-                .join('\n')
-            : '—') +
-          '\n';
-        t +=
-          'GPU: ' +
-          gpuName +
-          '\nUA: ' +
-          navigator.userAgent +
-          '\nядра ' +
-          navigator.hardwareConcurrency +
-          ', RAM ' +
-          (navigator.deviceMemory || '?') +
-          ' ГБ, экран ' +
-          screen.width +
-          '×' +
-          screen.height +
-          ' dpr ' +
-          devicePixelRatio;
-        return t;
+      function evFor(sp) {
+        if (sp.ext) return sp.ext;
+        const a = sp.t - 3,
+          b = sp.t + sp.per + 3,
+          r = [];
+        for (const e of evs) if (e.s < b && e.s + e.d > a) r.push(e);
+        if (r.length && performance.now() > b + 1500) sp.ext = r;
+        return r;
       }
-      P.m = i => {
-        if (!P.on) return;
+      function cause(sp) {
+        const t0 = sp.topA[0];
+        let best = t0 ? t0.d : 0,
+          kind = 's';
+        const dSd = sp.sd - med.sd,
+          dT = sp.tail - med.tail;
+        if (dSd > best) {
+          best = dSd;
+          kind = 'sd';
+        }
+        if (dT > best) {
+          best = dT;
+          kind = 't';
+        }
+        let s = '?';
+        const es = evFor(sp);
+        if (kind === 'sd') s = 'до rAF: чужие задачи (ввод / таймеры / декодирование / GC)';
+        else if (kind === 't') {
+          const lay = es.reduce((m, e) => Math.max(m, e.lay || 0), 0);
+          if (sp.gpu >= 0 && sp.gpu - med.gpu > 0.5 * dT) s = 'GPU (' + f1(sp.gpu) + ' мс, обычно ' + f1(med.gpu) + ')';
+          else if (lay > 8) s = 'стиль/раскладка DOM (' + f1(lay) + ' мс)';
+          else s = 'после колбэка: композитор / растеризация DOM / vsync' + (sp.gpu < 0 ? ' или GPU (таймера нет)' : '');
+        } else if (t0) {
+          s = t0.n;
+          if (/^рендер \(отправка/.test(t0.n))
+            s = /программы|текстуры|геометрии/.test(sp.chg)
+              ? 'рендер: компиляция шейдера / загрузка текстуры / геометрии'
+              : P.sync
+                ? 'рендер (CPU + ожидание GPU)'
+                : 'рендер: отправка команд (CPU)';
+        }
+        return s + ' +' + f1(Math.max(0, best)) + ' мс' + (sp.gc ? ' · GC?' : '');
+      }
+
+      /* ---------- хуки из кода приложения ---------- */
+      P.t = name => {
+        if (!inF) return;
         const t = performance.now();
-        if (i === 1) ms.a += t - tm0;
-        else if (i === 2) ms.b += t - tm0;
-        tm0 = t;
+        secCur[sid(name)] += t - tm;
+        tm = t;
+      };
+      P.mark = txt => {
+        evs.unshift({ s: performance.now(), d: 0, txt: '• ' + txt });
+        if (evs.length > 100) evs.pop();
       };
       P.begin = now => {
         if (!P.on) return;
-        t0 = performance.now();
-        if (last) dts.push(now - last);
-        if (dts.length > 600) dts.shift();
-        last = now;
+        const t0 = performance.now();
+        if (fid >= 0 && done) finalize(fid, now - fT[fid % N]);
+        fid++;
+        const s = fid % N;
+        fT[s] = now;
+        fSd[s] = Math.max(0, t0 - now);
+        fPer[s] = -2;
+        fL[s] = fR[s] = fP[s] = fBusy[s] = 0;
+        fGpu[s] = -1;
+        secCur.fill(0);
+        tm = tB = t0;
+        inF = true;
+        done = false;
       };
       P.r0 = () => {
-        if (!P.on) return;
+        if (!P.on || !inF) return;
+        P.t('прочее до рендера');
         if (P.off.msw && skySphere) skySphere.visible = false;
         if (P.off.clouds && earthB.cloudsMesh) earthB.cloudsMesh.visible = false;
         if (P.off.vatm && earthB.vatm) earthB.vatm.visible = false;
@@ -2895,20 +3053,23 @@ const minPix = 3;
           [glow, gl2, gl3, gl4, gl5, glFar].forEach(o => {
             if (o) o.visible = false;
           });
-        tR0 = performance.now();
-        if (ext && !q && pend.length < 6) {
+        tR0 = tm = performance.now();
+        if (ext && !q && pendQ.length < 6) {
           q = gl.createQuery();
+          qf = fid;
           gl.beginQuery(ext.TIME_ELAPSED_EXT, q);
         }
       };
       P.r1 = () => {
-        if (!P.on) return;
-        tR1 = performance.now();
+        if (!P.on || !inF) return;
         if (q) {
           gl.endQuery(ext.TIME_ELAPSED_EXT);
-          pend.push(q);
+          pendQ.push(q);
+          pendF.push(qf);
           q = null;
         }
+        if (P.sync) gl.finish();
+        tR1 = tm = performance.now();
         const r = renderer.info;
         info.c = r.render.calls;
         info.t = r.render.triangles;
@@ -2919,63 +3080,392 @@ const minPix = 3;
         info.pr = r.programs ? r.programs.length : 0;
       };
       P.end = () => {
-        if (!P.on) return;
-        const te = performance.now(),
-          L = tR0 - t0,
+        if (!P.on || !inF) return;
+        P.t('прочее после рендера');
+        const te = tm,
+          s = fid % N,
+          L = tR0 - tB,
           R = tR1 - tR0,
           Ps = te - tR1;
-        ms.c += te - tm0;
-        ms.l += L;
-        ms.r += R;
-        ms.p += Ps;
-        ms.n++;
-        const dt = dts.length ? dts[dts.length - 1] : 0,
-          heap = performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0;
-        if (dts.length > 20 && (dt > 33.4 || dt > 2.2 * medDt)) {
-          spikes.unshift(
-            '+' +
-              ((performance.now() / 1000) | 0) +
-              'с  кадр ' +
-              dt.toFixed(0) +
-              'мс  (лог ' +
-              L.toFixed(1) +
-              ' рендер ' +
-              R.toFixed(1) +
-              ' пост ' +
-              Ps.toFixed(1) +
-              (info.gpu ? ' gpu ' + info.gpu.toFixed(1) : '') +
-              ')  [' +
-              fpsState +
-              ']' +
-              (heap && lastHeap - heap > 1.5 ? '  GC?' : '')
-          );
-          if (spikes.length > 40) spikes.pop();
-        }
-        lastHeap = heap;
+        secCur[sid('рендер (отправка в GPU)')] += R;
+        const o = s * SMAX;
+        for (let j = 0; j < SMAX; j++) fSec[o + j] = secCur[j];
+        fL[s] = L;
+        fR[s] = R;
+        fP[s] = Ps;
+        fBusy[s] = te - tB;
+        fCalls[s] = info.c;
+        fTris[s] = info.t;
+        fHeap[s] = performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0;
+        snap(s);
+        const sp0 = spikeByF.get(fid - 1);
+        if (sp0 && heapDrop(fid - 1, fid)) sp0.gc = true;
+        inF = false;
+        done = true;
         if (ext) poll();
-        if (te - tShow > 500) {
-          tShow = te;
-          const S = stats();
-          if (S) medDt = S.med;
-          pre.textContent = reportText();
+        if (te - tShow > 500 && !uiPend) {
+          uiPend = true;
+          const run = () => {
+            uiPend = false;
+            tShow = performance.now();
+            if (!P.on) return;
+            pre.textContent = reportText();
+            drawGraph();
+          };
+          /* тяжёлый пересчёт отчёта — вне rAF-колбэка, чтобы сам профайлер не давал всплесков */
+          if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 1500 });
+          else setTimeout(run, 0);
         }
       };
+
+      /* ---------- наблюдатели браузера ---------- */
+      const onLoaf = es => {
+        for (const e of es) {
+          const sc2 = e.scripts || [];
+          let scr = 0,
+            forced = 0;
+          for (const x of sc2) {
+            scr += x.duration;
+            forced += x.forcedStyleAndLayoutDuration || 0;
+          }
+          const end = e.startTime + e.duration,
+            rs = e.renderStart || 0,
+            sl = e.styleAndLayoutStart || 0;
+          const tasks = rs ? rs - e.startTime : e.duration,
+            raf = rs && sl ? sl - rs : 0,
+            sty = sl ? end - sl : 0;
+          const top = sc2
+            .slice()
+            .sort((a, b) => b.duration - a.duration)
+            .slice(0, 2)
+            .map(
+              x =>
+                (x.invokerType || '?') +
+                ' ' +
+                (x.invoker || '') +
+                ' ← ' +
+                shortUrl(x.sourceURL) +
+                ':' +
+                (x.sourceFunctionName || '(анон.)') +
+                '@' +
+                x.sourceCharPosition +
+                ' ' +
+                x.duration.toFixed(0) +
+                'мс' +
+                (x.forcedStyleAndLayoutDuration > 3 ? ' (принуд. раскладка ' + x.forcedStyleAndLayoutDuration.toFixed(0) + ')' : '')
+            )
+            .join('; ');
+          evs.unshift({
+            s: e.startTime,
+            d: e.duration,
+            lay: sty + forced,
+            txt:
+              'LoAF ' + e.duration.toFixed(0) + 'мс: скрипты ' + scr.toFixed(0) + (forced > 1 ? ' (из них принуд. раскладка ' + forced.toFixed(0) + ')' : '') +
+              ' · задачи ' + tasks.toFixed(0) + ' · rAF ' + raf.toFixed(0) + ' · стиль/раскладка ' + sty.toFixed(0) +
+              (e.blockingDuration ? ' · блок. ' + e.blockingDuration.toFixed(0) : '') + (top ? ' | ' + top : ''),
+          });
+        }
+        while (evs.length > 100) evs.pop();
+      };
+      const onLt = es => {
+        for (const e of es) {
+          const a = e.attribution && e.attribution[0];
+          evs.unshift({ s: e.startTime, d: e.duration, txt: 'долгая задача ' + e.duration.toFixed(0) + 'мс' + (a && a.containerType ? ' [' + a.containerType + ']' : '') });
+        }
+        while (evs.length > 100) evs.pop();
+      };
+      const onEv = es => {
+        for (const e of es) {
+          const pr = e.processingEnd - e.processingStart;
+          if (pr < 8 && e.duration < 100) continue;
+          evs.unshift({
+            s: e.startTime,
+            d: e.duration,
+            txt: 'событие ' + e.name + ' ' + e.duration + 'мс (обработчик ' + pr.toFixed(0) + ', ожидание ввода ' + (e.processingStart - e.startTime).toFixed(0) + ')',
+          });
+        }
+        while (evs.length > 100) evs.pop();
+      };
+      function startObs() {
+        if (typeof PerformanceObserver === 'undefined') return;
+        const sup = PerformanceObserver.supportedEntryTypes || [];
+        const add = (type, cb, opts) => {
+          try {
+            const o = new PerformanceObserver(l => cb(l.getEntries()));
+            o.observe(Object.assign({ type }, opts || {}));
+            obs.push(o);
+            return true;
+          } catch (e) {
+            return false;
+          }
+        };
+        hasLoaf = sup.includes('long-animation-frame') && add('long-animation-frame', onLoaf);
+        hasLt = !hasLoaf && sup.includes('longtask') && add('longtask', onLt);
+        hasEv = sup.includes('event') && add('event', onEv, { durationThreshold: 32 });
+      }
+      function stopObs() {
+        obs.forEach(o => o.disconnect());
+        obs = [];
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (!P.on) return;
+        skipNext = true;
+        P.mark(document.hidden ? 'вкладка скрыта' : 'вкладка снова видима');
+      });
+      addEventListener('resize', () => {
+        if (P.on) P.mark('resize ' + innerWidth + '×' + innerHeight);
+      });
+      addEventListener('orientationchange', () => {
+        if (P.on) P.mark('orientationchange');
+      });
+
+      /* ---------- статистика ---------- */
+      function refresh() {
+        let n = 0;
+        const frames = [];
+        for (let k = 1; k <= W; k++) {
+          const f = fid - k;
+          if (f < 0 || f <= fid - N) break;
+          const s = f % N;
+          if (!(fPer[s] > 0)) continue;
+          frames.push(s);
+          sc.per[n] = fPer[s];
+          sc.sd[n] = fSd[s];
+          sc.L[n] = fL[s];
+          sc.R[n] = fR[s];
+          sc.P[n] = fP[s];
+          sc.busy[n] = fBusy[s];
+          sc.tail[n] = Math.max(0, fPer[s] - fSd[s] - fBusy[s]);
+          sc.gpu[n] = fGpu[s] >= 0 ? fGpu[s] : NaN;
+          n++;
+        }
+        if (!n) {
+          rep = null;
+          return;
+        }
+        let sum = 0,
+          mx = 0;
+        const hist = [0, 0, 0, 0, 0, 0],
+          hb = [17.5, 25, 34, 50, 100];
+        for (let i = 0; i < n; i++) {
+          const v = sc.per[i];
+          sum += v;
+          if (v > mx) mx = v;
+          let b = 0;
+          while (b < hb.length && v > hb[b]) b++;
+          hist[b]++;
+        }
+        const srt = tmp.subarray(0, n);
+        srt.set(sc.per.subarray(0, n));
+        srt.sort();
+        const mean = sum / n,
+          p99 = srt[Math.min(n - 1, Math.floor(0.99 * n))],
+          p999 = srt[Math.min(n - 1, Math.floor(0.999 * n))];
+        med.per = srt[n >> 1];
+        med.sd = medOf(sc.sd, n);
+        med.L = medOf(sc.L, n);
+        med.R = medOf(sc.R, n);
+        med.P = medOf(sc.P, n);
+        med.busy = medOf(sc.busy, n);
+        med.tail = medOf(sc.tail, n);
+        let gn = 0;
+        for (let i = 0; i < n; i++) if (sc.gpu[i] === sc.gpu[i]) sc.gpu[gn++] = sc.gpu[i];
+        med.gpu = medOf(sc.gpu, gn);
+        /* секции */
+        const nS = snames.length,
+          rows = [];
+        for (let j = 0; j < nS; j++) {
+          let a = 0,
+            m = 0;
+          for (let i = 0; i < frames.length; i++) {
+            const v = fSec[frames[i] * SMAX + j];
+            a += v;
+            if (v > m) m = v;
+          }
+          secAvg[j] = a / n;
+          rows.push({ n: snames[j], a: a / n, m, h: sTop[j] });
+        }
+        rows.sort((x, y) => y.m - x.m);
+        /* по режимам */
+        const bySt = new Map();
+        for (let i = 0; i < frames.length; i++) {
+          const s = frames[i],
+            key = poolArr[fSn[s * SNN]] + '·' + poolArr[fSn[s * SNN + 1]] + (fSn[s * SNN + 3] ? '·real' : '');
+          let e = bySt.get(key);
+          if (!e) bySt.set(key, (e = { n: 0, a: 0, m: 0, c: 0 }));
+          e.n++;
+          e.a += fPer[s];
+          e.c += fBusy[s];
+          if (fPer[s] > e.m) e.m = fPer[s];
+        }
+        /* аллокации и GC */
+        let alloc = 0,
+          gcN = 0;
+        for (let i = 1; i < frames.length; i++) {
+          const h1 = fHeap[frames[i - 1]],
+            h0 = fHeap[frames[i]];
+          if (h1 > 0 && h0 > 0) {
+            if (h1 - h0 > 1.5) gcN++;
+            else if (h1 > h0) alloc += h1 - h0;
+          }
+        }
+        const span = frames.length > 1 ? (fT[frames[0]] - fT[frames[frames.length - 1]]) / 1000 : 0;
+        /* вердикт */
+        let verdict;
+        const gk = gn > 0;
+        if (med.busy > 0.8 * med.per) verdict = 'упор в CPU (JS): колбэк занимает ' + Math.round((100 * med.busy) / med.per) + '% кадра';
+        else if (gk && med.gpu > 0.85 * med.per) verdict = 'упор в GPU: ' + f1(med.gpu) + ' мс на кадр при периоде ' + f1(med.per);
+        else if (!gk && med.tail > 0.5 * med.per && med.per > 20) verdict = 'CPU свободен, период длинный: вероятно GPU (таймера нет — включи «GPU-синхр.») или ограничение vsync/браузера';
+        else verdict = 'запас есть: колбэк ' + Math.round((100 * med.busy) / med.per) + '% периода' + (med.per > 20 ? ', период длинный — ограничение vsync/браузера?' : '');
+        rep = { n, mean, fps: 1000 / mean, low1: 1000 / p99, low01: 1000 / p999, max: mx, hist, rows, bySt, alloc: span > 0 ? alloc / span : 0, gcN, verdict, gk };
+      }
+      function evTxt(e) {
+        return '+' + (e.s / 1000).toFixed(1) + 'с ' + e.txt;
+      }
+      function fmtSpike(sp) {
+        const dpr = '';
+        let t =
+          '+' + (sp.t / 1000).toFixed(1) + 'с ' + (sp.kind ? 'CPU-всплеск' : 'кадр') + ' ' + sp.per.toFixed(0) + 'мс  [до rAF ' + f1(sp.sd) + ' | колбэк ' + f1(sp.busy) +
+          ' (лог ' + f1(sp.L) + ' / рендер ' + f1(sp.R) + ' / пост ' + f1(sp.P) + ') | после ' + f1(Math.max(0, sp.tail)) + ']' +
+          (sp.gpu >= 0 ? ' gpu ' + f1(sp.gpu) : '') + ' выз ' + sp.calls + ' тр ' + (sp.tris >= 1e5 ? (sp.tris / 1e6).toFixed(2) + 'M' : sp.tris) + ' {' + sp.st + '}' + dpr + '\n    → ' + cause(sp);
+        if (sp.topA.length) t += '\n    секции: ' + sp.topA.map(x => x.n + ' ' + f1(x.v) + ' (обычно ' + f1(x.v - x.d) + ')').join(', ');
+        if (sp.chg) t += '\n    изменилось: ' + sp.chg;
+        const es = evFor(sp);
+        for (const e of es.slice(0, 3)) t += '\n    ⤷ ' + e.txt;
+        return t;
+      }
+      function reportText() {
+        if (P.on && fid > 0) refresh();
+        const S = rep,
+          n = S ? S.n : 0;
+        bs.set(0, 0);
+        renderer.getDrawingBufferSize(bs);
+        const mem = performance.memory ? (performance.memory.usedJSHeapSize / 1048576).toFixed(0) + ' МБ' : 'n/a';
+        let t = '';
+        if (S) {
+          t += 'FPS ' + f1(S.fps) + ' (ср.)  1%-low ' + f1(S.low1) + '  0.1%-low ' + f1(S.low01) + '  макс.кадр ' + f1(S.max) + ' мс  (окно ' + n + ' кадров, порог всплеска ' + f1(Math.max(med.per * SENS[sens], med.per + 3.5)) + ' мс)\n';
+          t += 'Гистограмма периода: ≤17.5: ' + S.hist[0] + ' · ≤25: ' + S.hist[1] + ' · ≤34: ' + S.hist[2] + ' · ≤50: ' + S.hist[3] + ' · ≤100: ' + S.hist[4] + ' · >100: ' + S.hist[5] + '\n';
+          t += 'Типичный кадр (медианы), мс: период ' + f1(med.per) + ' = до rAF ' + f1(med.sd) + ' + колбэк ' + f1(med.busy) + ' (лог ' + f1(med.L) + ' / рендер ' + f1(med.R) + ' / пост ' + f1(med.P) + ') + после ' + f1(med.tail) + '\n';
+          t += 'GPU/кадр: ' + (ext ? (S.gk ? 'медиана ' + f1(med.gpu) + ' мс (последний ' + f1(lastGpu) + ')' : 'ждём…') : 'n/a (нет EXT_disjoint_timer_query)') + (P.sync ? '  [GPU-синхр. ВКЛ: рендер включает ожидание GPU]' : '') + '\n';
+          t += 'Вывод: ' + S.verdict + '\n';
+          t += 'Секции CPU, мс/кадр  (ср. / макс. / раз был главным виновником всплеска):\n';
+          const rows = S.rows.filter((r, i) => i < 12 || r.a > 0.3);
+          for (const r of rows.slice(0, 18)) t += '  ' + r.n + ': ' + r.a.toFixed(2) + ' / ' + f1(r.m) + (r.h ? ' / ×' + r.h : '') + '\n';
+          t += 'По режимам (режим·цель): ';
+          const parts = [];
+          S.bySt.forEach((e, k) => parts.push(k + ' ' + f1(e.a / e.n) + ' мс (колбэк ' + f1(e.c / e.n) + ', макс ' + f1(e.m) + ', n=' + e.n + ')'));
+          t += parts.join(' | ') + '\n';
+          t += 'JS: аллокации ≈ ' + f1(S.alloc) + ' МБ/с, падений кучи (GC?) в окне: ' + S.gcN + '  [performance.memory грубая]\n';
+        } else t += 'FPS -  (данных пока нет)\n';
+        t += 'Вызовы ' + info.c + '  Треуг. ' + info.t + '  Точки ' + info.p + '  Линии ' + info.l + '\nГеометрий ' + info.g + '  Текстур ' + info.x + '  Программ ' + info.pr + '\n';
+        t +=
+          'Буфер ' + bs.x + '×' + bs.y + ' (dpr ' + renderer.getPixelRatio().toFixed(2) + ') Q=' + Q_LABEL + '  тени ' +
+          (renderer.shadowMap.enabled ? (SHADOW_CACHE ? 'кэш (обн. ' + shUpdN + ')' : renderer.shadowMap.autoUpdate ? 'вкл' : 'заморожены') : 'выкл') + ' ' + Q.shadowSize + '\n';
+        t += 'JS heap ' + mem + '  состояние ' + fpsState + '  real=' + real + '  DOM-узлов ' + document.getElementsByTagName('*').length + '\n';
+        t += 'A/B выкл: ' + (Object.keys(P.off).filter(k => P.off[k]).join(', ') || '—') + '\n';
+        t += 'Наблюдатели: LoAF ' + (hasLoaf ? 'да' : 'нет') + ', longtask ' + (hasLt ? 'да' : 'нет') + ', event ' + (hasEv ? 'да' : 'нет') + '\n';
+        const fr = spikes.filter(x => x.kind === 0),
+          cp = spikes.filter(x => x.kind === 1);
+        const tally = {};
+        for (const x of fr) {
+          const c = cause(x).replace(/ \+[\d.]+ мс.*$/, '');
+          tally[c] = (tally[c] || 0) + 1;
+        }
+        const tl = Object.keys(tally).sort((a, b) => tally[b] - tally[a]);
+        t += 'Всплесков кадра: ' + fr.length + ', CPU-всплесков: ' + cp.length + (tl.length ? '\nПричины: ' + tl.map(k => k + ' ×' + tally[k]).join('; ') : '') + '\n';
+        if (worst.length) t += 'Худшие кадры:\n' + worst.map(x => '  ' + fmtSpike(x).replace(/\n/g, '\n  ')).join('\n') + '\n';
+        t += 'Последние всплески кадра:\n' + (fr.length ? fr.slice(0, 10).map(fmtSpike).join('\n') : '—') + '\n';
+        if (cp.length) t += 'Последние CPU-всплески (кадр уложился в период, но колбэк раздулся):\n' + cp.slice(0, 4).map(fmtSpike).join('\n') + '\n';
+        t += 'События браузера (последние):\n' + (evs.length ? evs.slice(0, 10).map(evTxt).join('\n') : '—') + '\n';
+        t += 'GPU: ' + gpuName + '\nUA: ' + navigator.userAgent + '\nядра ' + navigator.hardwareConcurrency + ', RAM ' + (navigator.deviceMemory || '?') + ' ГБ, экран ' + screen.width + '×' + screen.height + ' dpr ' + devicePixelRatio;
+        return t;
+      }
+      function drawGraph() {
+        const w = cv.width,
+          h = cv.height,
+          K = 240,
+          bw = w / K,
+          ymax = 80;
+        cx.fillStyle = '#02040a';
+        cx.fillRect(0, 0, w, h);
+        const thr = Math.max(med.per * SENS[sens], med.per + 3.5);
+        for (let k = 0; k < K; k++) {
+          const f = fid - 1 - (K - 1 - k);
+          if (f < 0 || f <= fid - N) continue;
+          const s = f % N,
+            v = fPer[s];
+          if (!(v > 0)) continue;
+          const x = k * bw,
+            hp = Math.min(h, (v / ymax) * h),
+            hb2 = Math.min(h, (fBusy[s] / ymax) * h);
+          cx.fillStyle = v > thr ? '#d9453b' : '#2f7d4f';
+          cx.fillRect(x, h - hp, Math.max(1, bw - 0.5), hp);
+          cx.fillStyle = '#4a8fe0';
+          cx.fillRect(x, h - hb2, Math.max(1, bw - 0.5), hb2);
+        }
+        cx.strokeStyle = 'rgba(255,255,255,.25)';
+        cx.fillStyle = 'rgba(255,255,255,.5)';
+        cx.font = '9px monospace';
+        for (const ms of [16.7, 33.3, 66.7]) {
+          const y = h - (ms / ymax) * h;
+          cx.beginPath();
+          cx.moveTo(0, y);
+          cx.lineTo(w, y);
+          cx.stroke();
+          cx.fillText(String(Math.round(ms)), 2, y - 1);
+        }
+      }
+      function dumpLog() {
+        const n = Math.min(N, fid),
+          r2 = v => Math.round(v * 100) / 100;
+        const o = { meta: { when: new Date().toISOString(), ua: navigator.userAgent, gpu: gpuName, dpr: devicePixelRatio, pixelRatio: renderer.getPixelRatio(), screen: screen.width + 'x' + screen.height, cores: navigator.hardwareConcurrency, sections: snames.slice(), snapFields: SNL, snapPool: poolArr.slice(), off: Object.keys(P.off).filter(k => P.off[k]), sync: P.sync, medians: med }, cols: 't,period,sd,L,R,P,busy,gpu,calls,tris,heapMB', frames: [], sec: [], snap: [] };
+        for (let k = n; k >= 1; k--) {
+          const f = fid - k,
+            s = f % N;
+          if (f < 0) continue;
+          o.frames.push([r2(fT[s]), r2(fPer[s]), r2(fSd[s]), r2(fL[s]), r2(fR[s]), r2(fP[s]), r2(fBusy[s]), r2(fGpu[s]), fCalls[s], fTris[s], r2(fHeap[s])]);
+          const row = [];
+          for (let j = 0; j < snames.length; j++) row.push(r2(fSec[s * SMAX + j]));
+          o.sec.push(row);
+          o.snap.push(Array.from(fSn.subarray(s * SNN, s * SNN + SNN)));
+        }
+        o.report = reportText();
+        o.spikes = spikes.map(x => fmtSpike(x));
+        o.events = evs.map(evTxt);
+        const blob = new Blob([JSON.stringify(o)], { type: 'application/json' }),
+          a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'prof-' + Date.now() + '.json';
+        document.body.append(a);
+        a.click();
+        setTimeout(() => {
+          URL.revokeObjectURL(a.href);
+          a.remove();
+        }, 2000);
+      }
       P.set = v => {
         P.on = v;
         el.style.display = v ? '' : 'none';
+        PT = v ? P.t : null;
+        PM = v ? P.mark : null;
+        resetData();
         if (!v) {
           for (const k in P.off) {
             P.off[k] = false;
             chips[k].classList.remove('off');
             rest[k]();
           }
-          last = 0;
+          P.sync = false;
+          syncB.classList.remove('off');
+          syncB.textContent = 'GPU-синхр.';
+          stopObs();
         } else {
-          last = 0;
-          dts.length = 0;
-          spikes.length = 0;
+          stopObs();
+          startObs();
+          if (!snames.length) pre.textContent = 'Собираю данные…';
         }
       };
+      P.report = reportText;
       return P;
     })();
 
@@ -3668,6 +4158,7 @@ const minPix = 3;
               gMat.uniforms.uTex.value = t;
               gMat.uniforms.uHas.value = 1;
               gDone = true;
+              PM && PM('egarden.png загружена (загрузка в GPU при ближайшем рендере)');
               artDbg.gDone = performance.now();
             },
             undefined,
@@ -3724,6 +4215,7 @@ const minPix = 3;
           if (_lodCur === 0 && h < 0.085) want = 2;
         }
         if (want === _lodCur && earthB.m.geometry !== fpsGeoCoarse) return;
+        PM && PM('LOD Земли ' + _lodCur + '→' + want + (want === 1 && !fpsGeoMid ? ' (создание геометрии 192×96)' : want === 2 && !fpsGeoFine ? ' (создание геометрии ' + FPS_SEG_W + '×' + FPS_SEG_H + ')' : ''));
         if (want === 1 && !fpsGeoMid) fpsGeoMid = new TH.SphereGeometry(1, 192, 96);
         if (want === 2 && !fpsGeoFine) fpsGeoFine = new TH.SphereGeometry(1, FPS_SEG_W, FPS_SEG_H);
         const g2 = want === 0 ? fpsGeoCoarse : want === 1 ? fpsGeoMid : fpsGeoFine;
@@ -4222,8 +4714,11 @@ const minPix = 3;
         },
         labels() {
           artStep(performance.now());
+          PT && PT('картинки созвездий (art)');
           conLabels();
+          PT && PT('подписи созвездий');
           drawNames();
+          PT && PT('названия звёзд/объектов');
         },
         groundSync,
         update() {
@@ -4234,7 +4729,9 @@ const minPix = 3;
           g.position.copy(C.position);
           g.scale.copy(sky.scale);
           upd(tm);
+          PT && PT('SkyW.upd: тени/позиции планет');
           atmo();
+          PT && PT('SkyW.atmo');
         },
       };
     })();
@@ -5117,11 +5614,14 @@ const minPix = 3;
         const pulse = (real ? 0.06 : 0.04) * Math.sin(now / 700);
         glFar.material.opacity = Math.max(0, Math.min(1, (bBase * bMul + pulse) * M));
       }
+      PT && PT('Солнце: свечение/масштаб');
       place();
+      PT && PT('place');
       for (const b of bodies) {
-        if (b.ln) b.ln.visible = orbitsVisible && b.k !== 'cer';
+        if (b.ln) b.ln.visible = orbitsVisible && b.k !== 'cer' && !PROF.off.orbits;
       }
       updateLocalOrbit();
+      PT && PT('updateLocalOrbit');
       for (const b of bodies) {
         if (b.isRoot || b.isSun) continue;
         const rc = (2 * PI) / (ROT_DAYS[b.k] || 1);
@@ -5145,6 +5645,7 @@ const minPix = 3;
           k.rotation.y = tm * k.userData.w;
         });
       }
+      PT && PT('вращение тел/пояса');
       {
         const camAU = C.position.length() / AU_TO_UNITS;
         if (!real) {
@@ -5200,6 +5701,7 @@ const minPix = 3;
           }
         }
       }
+      PT && PT('масштаб тел/точки');
       if (flyPath) {
         /* перелёт: траектория van Wijk, время по smootherstep; в конце точные значения без «защёлкивания» остатка */
         flyT += dt;
@@ -5249,7 +5751,9 @@ const minPix = 3;
       C.up.set(0, 1, 0).applyQuaternion(appliedQ);
       C.lookAt(tgv);
       if (_rec && _rec.a.length < _rec.n) _rec.a.push({ dt: Math.min(dt, 0.05), p: C.position.toArray(), u: flyU, f: C.getWorldDirection(new TH.Vector3()).toArray(), t: wpos(cur).toArray() });
+      PT && PT('камера/перелёт');
       gyroApply(dt);
+      PT && PT('gyroApply');
       if (fpsState === 'fly' || fpsState === 'stand') {
         computeFpsPose(_fpsTargetPos, _fpsTargetQuat);
         if (fpsState === 'fly') {
@@ -5284,10 +5788,13 @@ const minPix = 3;
         C.far = 1e8;
         C.updateProjectionMatrix();
       }
+      PT && PT('камера: режим неба/projection');
       sky.scale.setScalar(Math.max(1, dist / 1000));
       sky.position.copy(C.position);
       SkyW.update();
+      PT && PT('SkyW.update: прочее');
       skySync();
+      PT && PT('skySync');
       if (DUST_ON) {
         /* скорость камеры относительно объекта назначения: разность положений за кадр (rel = off + camOff) */
         _dRel.copy(off).add(camOff);
@@ -5301,7 +5808,7 @@ const minPix = 3;
         dustV = v;
         const kT = dustFlight ? _sstep(-2.0, -1.0, Math.log10(Math.max(nv, 1e-6))) : 0;
         dustK += (kT - dustK) * Math.min(1, dt * 8);
-        dust.visible = dustK > 0.01 && v > 1e-9;
+        dust.visible = dustK > 0.01 && v > 1e-9 && !PROF.off.dust;
         if (dust.visible) {
           const u = dust.material.uniforms,
             flow = (DUST_FLOW * nv) / (nv + 0.5),
@@ -5326,6 +5833,7 @@ const minPix = 3;
           dust.position.copy(C.position);
         }
       }
+      PT && PT('пыль');
       glow.position.copy(sunM.position);
       gl2.position.copy(sunM.position);
       gl3.position.copy(sunM.position);
@@ -5367,6 +5875,7 @@ const minPix = 3;
           U.uSkyGamma.value = 1;
         }
       }
+      PT && PT('свечение/матрицы/Млечный Путь');
       let sOf = null;
       {
         if (real) {
@@ -5396,6 +5905,7 @@ const minPix = 3;
           wasP = real;
         }
       }
+      PT && PT('яркость тел по расстоянию');
       for (const b of bodies) {
         if (!b.atm) continue;
         const U = b.atm.material.uniforms;
@@ -5416,19 +5926,24 @@ const minPix = 3;
         R.uCc.value = b.m.scale.y;
         R.uS.value = b.ringMesh.scale.x;
       }
+      PT && PT('атмосферы/кольца');
       lodUpdate();
+      PT && PT('lodUpdate');
       document.body.classList.toggle('fps-on', fpsState !== 'off');
       document.body.classList.toggle('fps-sky', fpsState === 'fly' || fpsState === 'stand');
+      PT && PT('классы body');
       SkyW.groundSync();
+      PT && PT('groundSync');
       PROF.r0();
-      renderer.render(S, C);
+      if (!PROF.off.render) renderer.render(S, C);
       PROF.r1();
-      PROF.m(0);
-      updateLabels();
-      PROF.m(1);
-      updateHorizonLabels();
-      PROF.m(2);
-      SkyW.labels();
+      if (!PROF.off.labels) {
+        updateLabels();
+        PT && PT('подписи планет (DOM)');
+        updateHorizonLabels();
+        PT && PT('подписи горизонта (DOM)');
+        SkyW.labels();
+      }
       PROF.end();
     }
     /*GYRO-BEGIN*/
