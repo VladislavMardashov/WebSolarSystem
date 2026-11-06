@@ -169,7 +169,7 @@ const QUALITY_LEVELS = {
     maxTexDim: 2048,
     shadowSize: 1024,
     skySize: 4000,
-    dpr: 1,
+    dpr: 1.5,
     normalAll: true,
     normalMarsOnly: false,
     asteroidMul: 0.4,
@@ -5068,6 +5068,33 @@ const minPix = 3;
       S.add(m);
       return m;
     })();
+    /* Динамическое разрешение: стартуем с Q.dpr (high/med = 1.5), и если FPS держится ниже 30 — ступенчато снижаем pixel ratio.
+       Только вниз (чтобы не раскачивать); на время работы профайлера отключено, чтобы замеры не «плыли». */
+    const DYN = { steps: [1.5, 1.25, 1, 0.85, 0.75], bad: 0, hold: performance.now() + 6000 };
+    function dynRes(fps, el, now) {
+      if (PROF.on || document.hidden || el > 1500) {
+        DYN.bad = 0;
+        return;
+      }
+      if (now < DYN.hold || fps >= 30) {
+        DYN.bad = 0;
+        return;
+      }
+      if (++DYN.bad < 3) return; /* 1,5 с подряд ниже 30 */
+      DYN.bad = 0;
+      const cur = renderer.getPixelRatio();
+      let nx = 0;
+      for (const v of DYN.steps)
+        if (v < cur - 0.01) {
+          nx = v;
+          break;
+        }
+      if (!nx) return;
+      renderer.setPixelRatio(nx);
+      renderer.setSize(innerWidth, innerHeight);
+      DYN.hold = now + 2000; /* дать новой нагрузке устояться */
+      console.log('[dynres] fps=' + fps.toFixed(1) + ' → pixelRatio ' + cur + ' → ' + nx);
+    }
     const _dRel = new TH.Vector3(),
       _dV = new TH.Vector3();
     function loop(now) {
@@ -5078,7 +5105,9 @@ const minPix = 3;
       _fFrames++;
       const _fElapsed = now - _fLast;
       if (_fElapsed >= 500) {
-        fpsEl.textContent = Math.round((_fFrames * 1000) / _fElapsed) + ' FPS · ' + Q_LABEL;
+        const _fps = (_fFrames * 1000) / _fElapsed;
+        fpsEl.textContent = Math.round(_fps) + ' FPS · ' + Q_LABEL + ' ×' + Math.round(renderer.getPixelRatio() * 100) / 100;
+        dynRes(_fps, _fElapsed, now);
         _fFrames = 0;
         _fLast = now;
       }
