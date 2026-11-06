@@ -3117,7 +3117,7 @@ const minPix = 3;
         inF = false;
         done = true;
         if (ext) poll();
-        if (te - tShow > 500 && !uiPend) {
+        if (te - tShow > 1500 && !uiPend) {
           uiPend = true;
           const run = () => {
             uiPend = false;
