@@ -5068,32 +5068,67 @@ const minPix = 3;
       S.add(m);
       return m;
     })();
-    /* Динамическое разрешение: стартуем с Q.dpr (high/med = 1.5), и если FPS держится ниже 30 — ступенчато снижаем pixel ratio.
-       Только вниз (чтобы не раскачивать); на время работы профайлера отключено, чтобы замеры не «плыли». */
-    const DYN = { steps: [1.5, 1.25, 1, 0.85, 0.75], bad: 0, hold: performance.now() + 6000 };
+    /* Динамическое разрешение: стартуем с Q.dpr (high/med = 1.5, но не выше dpr экрана).
+       Вниз: FPS < 30 полторы секунды подряд → ступенька вниз. Вверх: FPS ≥ 50 держится DYN.wait окон по 0,5 с (4 с → 8 → 16 → 32 …) → ступенька вверх (не выше стартового).
+       Если после подъёма снова просело в течение 12 с — ожидание перед следующим подъёмом удваивается (4 → 8 → 16 → … с, не больше 2 мин), чтобы не качаться вверх-вниз.
+       На время работы профайлера отключено, чтобы замеры не «плыли». */
+    const DYN = { steps: [1.5, 1.25, 1, 0.85, 0.75], bad: 0, good: 0, wait: 8, max: 0, upAt: 0, hold: performance.now() + 6000 };
     function dynRes(fps, el, now) {
       if (PROF.on || document.hidden || el > 1500) {
-        DYN.bad = 0;
+        DYN.bad = DYN.good = 0;
         return;
       }
-      if (now < DYN.hold || fps >= 30) {
-        DYN.bad = 0;
+      if (!DYN.max) DYN.max = renderer.getPixelRatio();
+      if (now < DYN.hold) {
+        DYN.bad = DYN.good = 0;
         return;
       }
-      if (++DYN.bad < 3) return; /* 1,5 с подряд ниже 30 */
-      DYN.bad = 0;
       const cur = renderer.getPixelRatio();
+      const apply = (nx, why) => {
+        renderer.setPixelRatio(nx);
+        renderer.setSize(innerWidth, innerHeight);
+        DYN.hold = now + 2000; /* дать новой нагрузке устояться */
+        DYN.bad = DYN.good = 0;
+        console.log('[dynres] ' + why + ' fps=' + fps.toFixed(1) + ' → pixelRatio ' + cur + ' → ' + nx);
+      };
+      if (fps < 30) {
+        DYN.good = 0;
+        if (++DYN.bad < 3) return; /* 1,5 с подряд ниже 30 */
+        let nx = 0;
+        for (const v of DYN.steps)
+          if (v < cur - 0.01) {
+            nx = v;
+            break;
+          }
+        if (!nx) {
+          DYN.bad = 0;
+          return;
+        }
+        if (DYN.upAt && now - DYN.upAt < 12000) DYN.wait = Math.min(DYN.wait * 2, 240); /* подъём не удержался */
+        DYN.upAt = 0;
+        apply(nx, 'вниз');
+        return;
+      }
+      DYN.bad = 0;
+      if (DYN.upAt && now - DYN.upAt > 12000) {
+        DYN.wait = 8; /* подъём удержался — сбрасываем штраф */
+        DYN.upAt = 0;
+      }
+      if (fps < 50 || cur >= DYN.max - 0.01) {
+        DYN.good = 0;
+        return;
+      }
+      if (++DYN.good < DYN.wait) return;
       let nx = 0;
-      for (const v of DYN.steps)
-        if (v < cur - 0.01) {
-          nx = v;
+      for (let i = DYN.steps.length - 1; i >= 0; i--)
+        if (DYN.steps[i] > cur + 0.01) {
+          nx = DYN.steps[i];
           break;
         }
       if (!nx) return;
-      renderer.setPixelRatio(nx);
-      renderer.setSize(innerWidth, innerHeight);
-      DYN.hold = now + 2000; /* дать новой нагрузке устояться */
-      console.log('[dynres] fps=' + fps.toFixed(1) + ' → pixelRatio ' + cur + ' → ' + nx);
+      nx = Math.min(nx, DYN.max);
+      DYN.upAt = now;
+      apply(nx, 'вверх');
     }
     const _dRel = new TH.Vector3(),
       _dV = new TH.Vector3();
