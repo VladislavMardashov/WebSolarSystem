@@ -2377,6 +2377,7 @@ const minPix = 3;
     const fpsEl = document.createElement('div');
     fpsEl.id = 'fps';
     fpsEl.textContent = '— FPS · ' + Q_LABEL;
+    fpsEl.style.display = 'none'; /* по умолчанию счётчик скрыт; включается в «Слои → Отладка» */
     ($('#topRight') || document.body).append(fpsEl);
     let _fFrames = 0,
       _fLast = performance.now(),
@@ -4284,6 +4285,7 @@ const minPix = 3;
       lrow('groundChk', 'Поверхность Земли', true) +
       lrow('moonChk', 'Лунный свет', true) +
       '</div><div class="section" id="layDbg"><div class="section-label">Отладка</div>' +
+      lrow('fpsShowChk', 'Показывать FPS', false) +
       lrow('profChk', 'Профайлер (временный)', false) +
       '</div>';
     {
@@ -4318,6 +4320,9 @@ const minPix = 3;
     layersMenu.querySelector('#starNmChk').onchange = e => SkyW.setStarNames(e.target.checked);
     if (layersMenu.querySelector('#dsoChk')) layersMenu.querySelector('#dsoChk').onchange = e => SkyW.setDso(e.target.checked);
     layersMenu.querySelector('#planNmChk').onchange = e => SkyW.setPlanetNames(e.target.checked);
+    layersMenu.querySelector('#fpsShowChk').onchange = e => {
+      fpsEl.style.display = e.target.checked ? '' : 'none';
+    };
     layersMenu.querySelector('#profChk').onchange = e => PROF.set(e.target.checked);
     document.body.append(layersBtn, layersMenu);
     layersBtn.onclick = e => {
