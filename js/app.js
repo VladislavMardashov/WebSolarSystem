@@ -518,6 +518,68 @@ const _sstep = (e0, e1, x) => {
 };
 const dotPxTarget = 4;
 const minPix = 3;
+/* Финал загрузки: экран темнеет (всё содержимое #load — спиннер, полоска, звёзды и т.п. — гаснет под чёрной завесой),
+   под чёрным убираем загрузчик и прогреваем кадры сцены, затем из чёрного проявляется сцена с затухающим зумом,
+   а подписи и кнопки плавно появляются к концу. */
+const INTRO_ZOOM = 1.14;
+async function introReveal(ld) {
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const frames = n =>
+    new Promise(r => {
+      const f = () => (--n <= 0 ? r() : requestAnimationFrame(f));
+      requestAnimationFrame(f);
+    });
+  const cv = renderer.domElement,
+    body = document.body;
+  const reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const veil = document.createElement('div');
+  veil.id = 'introVeil';
+  /* пока завеса есть, касания не уходят в сцену */
+  ['pointerdown', 'pointermove', 'pointerup', 'touchstart', 'touchmove', 'touchend', 'mousedown', 'mouseup', 'click', 'wheel', 'contextmenu'].forEach(ev =>
+    veil.addEventListener(ev, e => e.stopPropagation(), { passive: true })
+  );
+  body.append(veil);
+  try {
+    await frames(1);
+    veil.classList.add('on'); /* 1) темнеем */
+    await wait(reduce ? 150 : 480);
+    ld.remove(); /* 2) под чёрным убираем загрузчик */
+    body.classList.add('intro');
+    if (!reduce) {
+      cv.style.willChange = 'transform';
+      cv.style.transform = 'scale(' + INTRO_ZOOM + ')';
+    }
+    await frames(3);
+    await wait(200); /* первые рендеры (загрузка текстур в GPU) проходят скрыто */
+    if (document.hidden)
+      await new Promise(r => {
+        const h = () => {
+          if (!document.hidden) {
+            document.removeEventListener('visibilitychange', h);
+            r();
+          }
+        };
+        document.addEventListener('visibilitychange', h);
+      });
+    /* 3) проявляем сцену из чёрного, зум затухает */
+    if (!reduce) {
+      cv.style.transition = 'transform 2.2s cubic-bezier(.12,.8,.25,1)';
+      cv.style.transform = 'scale(1)';
+    }
+    veil.classList.remove('on');
+    await wait(reduce ? 300 : 1100);
+    body.classList.remove('intro');
+    body.classList.add('intro-out'); /* интерфейс плавно проявляется */
+    await wait(reduce ? 300 : 1200);
+  } catch (e) {
+    console.warn('[intro]', e);
+  } finally {
+    ld.remove();
+    cv.style.transition = cv.style.transform = cv.style.willChange = '';
+    body.classList.remove('intro', 'intro-out');
+    veil.remove();
+  }
+}
 (async () => {
   const ld = $('#load'),
     lb = ld.querySelector('i'),
@@ -5922,9 +5984,9 @@ const minPix = 3;
     /*WARM-END*/
     await warmup();
     await prog(100, 'Готово');
-    ld.classList.add('done');
-    setTimeout(() => ld.remove(), 800);
-    requestAnimationFrame(loop);
+    DYN.hold = performance.now() + 5000; /* прогрев первых кадров не должен считаться просадкой */
+    requestAnimationFrame(loop); /* сцена начинает рендериться под чёрной завесой */
+    introReveal(ld);
   } catch (e) {
     showError('[fatal] ' + ((e && e.message) || e));
     lt.textContent = TR('Ошибка загрузки:') + ' ' + ((e && e.message) || e);
